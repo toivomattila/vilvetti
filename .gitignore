@@ -6,10 +6,17 @@
 # Dependencies and build (common for Node/TS)
 node_modules/
 dist/
+dist-ssr/
 .build/
 .next/
 .turbo/
 .vercel/
+
+# Vite / local env
+*.local
+
+# Convex
+.convex/
 
 # Logs and caches
 *.log
@@ -22,3 +29,5 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+.cursor/
+
