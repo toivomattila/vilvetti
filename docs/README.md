@@ -1,16 +1,15 @@
 # Documentation
 
-Product and engineering notes for this repository.
+Product and customer context for this repository.
 
-## Contents
+## Product
 
-| Document | Purpose |
-| -------- | ------- |
-| [Product avatar](product/avatar.md) | Primary customer persona the product is designed around—use for prioritization, UX copy, and scope decisions. |
+- [Target customer, example companies, and core problem](product/avatar.md)
+- [Current workflow mapping (pre-product)](product/workflow-mapping.md)
+- [Core operational workflow (actors, steps, information flow)](product/core-operational-workflow.md)
+- [Brutally minimal MVP definition](product/mvp-definition.md)
+- [Product requirements document (PRD)](product/prd.md)
 
-## Conventions
+## Engineering
 
-- **Product docs** live under `docs/product/`.
-- **Design specs** (when using the superpowers workflow) can live under `docs/superpowers/specs/` as dated markdown files.
-
-Add new topical docs here and link them from this index.
+- [Tooling, technical decisions, and standards](engineering/tooling-and-standards.md) — **decisions only**; implementation follows separately.

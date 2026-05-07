@@ -1,23 +1,89 @@
-# Primary customer avatar
+# Target Customer Avatar
 
-This is the default “who we’re building for” when requirements are ambiguous. It is a composite persona, not a single real company.
+Independent Finnish residential HVAC / heat pump maintenance companies with 4–15 employees where technicians perform multiple daily service visits and the owner or office staff manually collect missing job information before invoicing.
 
-## Snapshot
+## Characteristics
 
-A **Finnish HVAC / heat pump maintenance** business with **roughly 4–12 employees**, focused on **recurring residential service visits**. The **owner still works in operations** (not a pure back-office executive). **Invoicing and margins depend on technicians reporting job details correctly**—materials, time on site, work performed, and follow-up needs must make it from the field into billing without friction or guesswork.
+- Owner-operated business
+- Multiple field technicians
+- Residential customers
+- Recurring maintenance/service visits
+- Daily field operations
+- Small operational team
+- Limited process/software maturity
+- Coordination between field technicians and office staff
 
-## What this implies for the product
+## Out of scope
 
-- **Small team, high trust, low tolerance for admin overhead.** Flows should stay short; defaults and mobile-first matter.
-- **Recurring work is the spine of the business.** Scheduling, route density, and “next visit” context are first-class—not only one-off installs.
-- **Owner is often in the field.** They need the same clarity as dispatch, sometimes switching hats in one day.
-- **Billing integrity = field reporting quality.** Capture at the moment of work beats reconstructing from memory; validation and gentle completeness nudges beat punitive forms.
-- **Finland / HVAC context.** Metric units, local norms for seasons and heating-dominated loads, and Finnish language expectations in UI and comms when the product ships for this market.
+- Large enterprise HVAC companies
+- Industrial HVAC
+- Construction megaprojects
+- Enterprise ERP/FSM workflows
+- National chains
 
-## Anti-patterns (things this avatar is *not*)
+---
 
-- Enterprise facilities with dedicated asset managers and procurement portals.
-- Pure project-based commercial construction with long Gantt horizons and no recurrence.
-- Teams where invoicing is entirely decoupled from technician input (e.g. fixed retainers only).
+# Example Companies
 
-When a feature only serves those patterns, treat it as lower priority unless another avatar is explicitly adopted.
+Reference companies used to understand the target customer profile and operational environment.
+
+## T&T Lämpöpumppuhuolto Oy
+
+Website: [https://www.ttlampopumppuhuolto.fi/](https://www.ttlampopumppuhuolto.fi/)
+
+Public company data:
+
+- ~4 employees
+- ~€1.1M revenue (2023)
+- Heat pump maintenance/service company
+- Finland
+
+---
+
+## VILU Works Oy
+
+Website: [https://viluworks.fi/](https://viluworks.fi/)
+
+Public company data:
+
+- ~5 employees
+- ~€1M revenue (2025)
+- HVAC/LVI installation and maintenance company
+- Uusimaa region
+
+---
+
+## Teho-Posako Oy
+
+Website: [https://tehoposako.fi/](https://tehoposako.fi/)
+
+Public company data:
+
+- ~15–18 employees
+- HVAC / heat pump service company
+- Finland
+
+Reference note: Slightly above ideal company size but still operationally relevant.
+
+---
+
+# Core Operational Problem
+
+## Root problem
+
+Completed field service information is **not captured** in a **structured, complete, and invoice-ready** format **at the moment work is finished**.
+
+Everything else flows from this.
+
+## How it shows up
+
+When capture does not happen at completion time, the business still needs that data for invoicing and operational tracking—so it gets **reconstructed later** (calls, messages, spreadsheets, memory). Transfer is then **inconsistent, incomplete, and late**, and office staff **bridge the gap manually**.
+
+Examples of information that often fails to exist in structured, complete form at handover:
+
+- Work completed
+- Materials used
+- Hours worked
+- Photos
+- Maintenance notes
+- Customer confirmation/signature
