@@ -4,3 +4,5 @@ node_modules
 *.local
 .agents
 .cursor
+convex/_generated
+

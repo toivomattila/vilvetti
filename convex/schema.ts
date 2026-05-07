@@ -1,7 +1,10 @@
 import { defineSchema } from 'convex/server'
+import { authTables } from '@convex-dev/auth/server'
 
 /**
- * Empty schema placeholder. Tables and indexes will be added when implementing
- * the job / closeout model from the PRD.
+ * `authTables` supplies users, sessions, and related auth indexes for Convex Auth.
+ * Add product tables alongside these as the app grows.
  */
-export default defineSchema({})
+export default defineSchema({
+  ...authTables,
+})

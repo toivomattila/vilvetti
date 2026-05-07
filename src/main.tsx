@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { ConvexProvider, ConvexReactClient } from 'convex/react'
+import { ConvexAuthProvider } from '@convex-dev/auth/react'
+import { ConvexReactClient } from 'convex/react'
 import './index.css'
 import App from './App.tsx'
 
@@ -12,9 +13,9 @@ if (convexUrl) {
   const convex = new ConvexReactClient(convexUrl)
   root.render(
     <StrictMode>
-      <ConvexProvider client={convex}>
+      <ConvexAuthProvider client={convex}>
         <App />
-      </ConvexProvider>
+      </ConvexAuthProvider>
     </StrictMode>,
   )
 } else {
