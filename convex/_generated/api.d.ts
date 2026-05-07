@@ -10,6 +10,10 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as jobs from "../jobs.js";
+import type * as lib_profileAccess from "../lib/profileAccess.js";
+import type * as profiles from "../profiles.js";
+import type * as storage from "../storage.js";
 
 import type {
   ApiFromModules,
@@ -20,6 +24,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  jobs: typeof jobs;
+  "lib/profileAccess": typeof lib_profileAccess;
+  profiles: typeof profiles;
+  storage: typeof storage;
 }>;
 
 /**
