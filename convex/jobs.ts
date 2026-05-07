@@ -50,6 +50,61 @@ function requireJobInOrganization(
   return job
 }
 
+type AuthorizedJobDetail = {
+  job: Doc<'jobs'>
+  technicianDisplayName: string | null
+  submittedBy: { userId: Id<'users'>; displayName: string } | null
+}
+
+async function getAuthorizedJobDetail(
+  ctx: Pick<QueryCtx, 'db' | 'auth'>,
+  jobId: Id<'jobs'>,
+): Promise<AuthorizedJobDetail> {
+  const userId = await requireAuthenticatedUserId(ctx)
+  const profile = await requireProfileForUser(ctx, userId)
+  const job = await ctx.db.get(jobId)
+
+  if (profile.role === 'office') {
+    requireJobInOrganization(job, profile.organizationId)
+  } else {
+    requireTechnicianRole(profile)
+    const foundJob = requireJobInOrganization(job, profile.organizationId)
+    if (foundJob.assignedTechnicianId !== userId) {
+      throw new Error('You can only view jobs assigned to you.')
+    }
+  }
+
+  const checkedJob = requireJobInOrganization(job, profile.organizationId)
+  const technicianProfile = await ctx.db
+    .query('profiles')
+    .withIndex('by_userId', (q) =>
+      q.eq('userId', checkedJob.assignedTechnicianId),
+    )
+    .unique()
+
+  const submittedByTechnicianId = checkedJob.submittedByTechnicianId
+  const submittedByProfile = submittedByTechnicianId
+    ? await ctx.db
+        .query('profiles')
+        .withIndex('by_userId', (q) => q.eq('userId', submittedByTechnicianId))
+        .unique()
+    : null
+
+  return {
+    job: checkedJob,
+    technicianDisplayName:
+      technicianProfile?.organizationId === checkedJob.organizationId
+        ? technicianProfile.displayName
+        : null,
+    submittedBy: submittedByProfile
+      ? {
+          userId: submittedByProfile.userId,
+          displayName: submittedByProfile.displayName,
+        }
+      : null,
+  }
+}
+
 export const createJob = mutation({
   args: {
     customerName: v.string(),
@@ -163,7 +218,9 @@ export const listTechnicianJobsForDay = query({
     return await ctx.db
       .query('jobs')
       .withIndex('by_technician_and_day', (q) =>
-        q.eq('assignedTechnicianId', userId).eq('appointmentDate', args.dayStartMs),
+        q
+          .eq('assignedTechnicianId', userId)
+          .eq('appointmentDate', args.dayStartMs),
       )
       .order('desc')
       .collect()
@@ -175,47 +232,33 @@ export const getJob = query({
     jobId: v.id('jobs'),
   },
   handler: async (ctx, args) => {
-    const userId = await requireAuthenticatedUserId(ctx)
-    const profile = await requireProfileForUser(ctx, userId)
-    const job = await ctx.db.get(args.jobId)
+    return await getAuthorizedJobDetail(ctx, args.jobId)
+  },
+})
 
-    if (profile.role === 'office') {
-      requireJobInOrganization(job, profile.organizationId)
-    } else {
-      requireTechnicianRole(profile)
-      const foundJob = requireJobInOrganization(job, profile.organizationId)
-      if (foundJob.assignedTechnicianId !== userId) {
-        throw new Error('You can only view jobs assigned to you.')
-      }
-    }
+export const getJobDetailWithUrls = query({
+  args: {
+    jobId: v.id('jobs'),
+  },
+  handler: async (ctx, args) => {
+    const detail = await getAuthorizedJobDetail(ctx, args.jobId)
 
-    const checkedJob = requireJobInOrganization(job, profile.organizationId)
-    const technicianProfile = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', (q) => q.eq('userId', checkedJob.assignedTechnicianId))
-      .unique()
-
-    const submittedByProfile = checkedJob.submittedByTechnicianId
-      ? await ctx.db
-          .query('profiles')
-          .withIndex('by_userId', (q) =>
-            q.eq('userId', checkedJob.submittedByTechnicianId),
-          )
-          .unique()
+    const photoUrls = await Promise.all(
+      detail.job.photoStorageIds.map(async (storageId) => ({
+        storageId,
+        url: await ctx.storage.getUrl(storageId as Id<'_storage'>),
+      })),
+    )
+    const signatureUrl = detail.job.signatureStorageId
+      ? await ctx.storage.getUrl(
+          detail.job.signatureStorageId as Id<'_storage'>,
+        )
       : null
 
     return {
-      job: checkedJob,
-      technicianDisplayName:
-        technicianProfile?.organizationId === checkedJob.organizationId
-          ? technicianProfile.displayName
-          : null,
-      submittedBy: submittedByProfile
-        ? {
-            userId: submittedByProfile.userId,
-            displayName: submittedByProfile.displayName,
-          }
-        : null,
+      ...detail,
+      photoUrls,
+      signatureUrl,
     }
   },
 })
@@ -275,7 +318,11 @@ export const submitCloseout = mutation({
     if (!workCompleted) {
       throw new Error('Work completed is required.')
     }
-    if (Number.isNaN(args.laborHours) || args.laborHours < 0 || args.laborHours > 24) {
+    if (
+      Number.isNaN(args.laborHours) ||
+      args.laborHours < 0 ||
+      args.laborHours > 24
+    ) {
       throw new Error('Labor hours must be between 0 and 24.')
     }
     if (!signatureStorageId) {
