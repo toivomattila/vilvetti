@@ -108,7 +108,9 @@ export const joinOrganizationAsTechnician = mutation({
       .withIndex('by_slug', (q) => q.eq('slug', slug))
       .unique()
     if (!organization) {
-      throw new Error('Organization not found. Check the join code and try again.')
+      throw new Error(
+        'Organization not found. Check the join code and try again.',
+      )
     }
 
     const profileId = await ctx.db.insert('profiles', {
@@ -119,5 +121,33 @@ export const joinOrganizationAsTechnician = mutation({
     })
 
     return { profileId, organizationId: organization._id }
+  },
+})
+
+export const listTechniciansInOrg = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireAuthenticatedUserId(ctx)
+    const profile = await getProfileForUser(ctx, userId)
+    if (!profile) {
+      throw new Error('You must complete organization setup first.')
+    }
+    if (profile.role !== 'office') {
+      throw new Error('Office role required.')
+    }
+
+    const technicianProfiles = await ctx.db
+      .query('profiles')
+      .withIndex('by_organizationId', (q) =>
+        q.eq('organizationId', profile.organizationId),
+      )
+      .collect()
+
+    return technicianProfiles
+      .filter((technicianProfile) => technicianProfile.role === 'technician')
+      .map((technicianProfile) => ({
+        userId: technicianProfile.userId,
+        displayName: technicianProfile.displayName,
+      }))
   },
 })
