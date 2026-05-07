@@ -48,5 +48,8 @@ export default defineSchema({
   })
     .index('by_organization', ['organizationId'])
     .index('by_organization_and_status', ['organizationId', 'status'])
-    .index('by_technician_and_day', ['assignedTechnicianId', 'appointmentDate']),
+    .index('by_technician_and_day', [
+      'assignedTechnicianId',
+      'appointmentDate',
+    ]),
 })
