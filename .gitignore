@@ -1,0 +1,24 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies and build (common for Node/TS)
+node_modules/
+dist/
+.build/
+.next/
+.turbo/
+.vercel/
+
+# Logs and caches
+*.log
+.npm-cache/
+.eslintcache
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo
