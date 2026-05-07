@@ -2,6 +2,7 @@
 
 **Purpose:** Turn the brutally minimal MVP into an **executable specification** for design, implementation, and test.  
 **Status:** Working document — update as validation learns.  
+**Product name:** Vilvetti  
 **Related:** [Target customer & problem](avatar.md), [MVP definition](mvp-definition.md), [Core operational workflow](core-operational-workflow.md), [Engineering standards](../engineering/tooling-and-standards.md).
 
 ---
@@ -10,7 +11,7 @@
 
 ### What the product does
 
-A **mobile-first web application** that lets **field technicians** submit a **structured job closeout** immediately after a service visit, so **office staff** receive **complete, invoice-ready operational data** without chasing details through calls, WhatsApp, and memory.
+**Vilvetti** is a **mobile-first web application** that lets **field technicians** submit a **structured job closeout** immediately after a service visit, so **office staff** receive **complete, invoice-ready operational data** without chasing details through calls, WhatsApp, and memory.
 
 The product does **not** replace invoicing or accounting; it replaces the **fragmented handoff** between technician and office for post-visit information.
 

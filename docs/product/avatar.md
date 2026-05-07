@@ -1,6 +1,6 @@
 # Target Customer Avatar
 
-Independent Finnish residential HVAC / heat pump maintenance companies with 4–15 employees where technicians perform multiple daily service visits and the owner or office staff manually collect missing job information before invoicing.
+Vilvetti’s initial target: independent Finnish residential HVAC / heat pump maintenance companies with 4–15 employees where technicians perform multiple daily service visits and the owner or office staff manually collect missing job information before invoicing.
 
 ## Characteristics
 

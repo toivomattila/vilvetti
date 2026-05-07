@@ -1,6 +1,6 @@
 # Tooling, technical decisions, and engineering standards
 
-This document records **intended** technical choices, conventions, and rationale for this repository. It is a **standards and decision log**, not an implementation checklist: tooling may be introduced incrementally, but should align with these goals.
+This document records **intended** technical choices, conventions, and rationale for **Vilvetti**’s repository. It is a **standards and decision log**, not an implementation checklist: tooling may be introduced incrementally, but should align with these goals.
 
 ## Goals
 

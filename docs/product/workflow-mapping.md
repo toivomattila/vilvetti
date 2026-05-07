@@ -1,6 +1,6 @@
 # Current Workflow Mapping
 
-This section describes the current operational workflow for the target customer avatar **before the product exists**.
+This section describes the current operational workflow for the target customer avatar **before Vilvetti exists**.
 
 The goal is to map:
 

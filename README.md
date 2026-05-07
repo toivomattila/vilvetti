@@ -1,6 +1,6 @@
-# Field service job coordination
+# Vilvetti
 
-Web client (Vite + React + TypeScript) and backend (Convex) for small HVAC / heat pump field operations. Product direction lives under [`docs/product/`](docs/product/).
+Mobile-first web client (Vite + React + TypeScript) and backend (Convex) for small HVAC / heat pump field operations: structured job closeouts so the office gets invoice-ready handoffs without chasing technicians. Product direction lives under [`docs/product/`](docs/product/).
 
 ## Prerequisites
 

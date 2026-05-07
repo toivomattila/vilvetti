@@ -1,6 +1,6 @@
 # Convex backend
 
-This folder holds Convex schema and functions. Generated types live in `_generated/` (created by the Convex CLI).
+Vilvetti’s Convex backend: schema and functions live in this folder. Generated types live in `_generated/` (created by the Convex CLI).
 
 ## First-time setup
 
