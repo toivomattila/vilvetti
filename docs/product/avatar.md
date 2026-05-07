@@ -1,31 +1,23 @@
-# Product avatar (ideal customer profile)
+# Primary customer avatar
 
-This document defines the **primary audience** the product is designed for. Product and engineering decisions should be checked against this profile.
+This is the default “who we’re building for” when requirements are ambiguous. It is a composite persona, not a single real company.
 
-## One-line summary
+## Snapshot
 
-Owner-operated residential heat pump maintenance companies with **3–20 employees**, where **technicians complete multiple jobs per day** and **office staff manually chase missing job information before invoicing**.
+A **Finnish HVAC / heat pump maintenance** business with **roughly 4–12 employees**, focused on **recurring residential service visits**. The **owner still works in operations** (not a pure back-office executive). **Invoicing and margins depend on technicians reporting job details correctly**—materials, time on site, work performed, and follow-up needs must make it from the field into billing without friction or guesswork.
 
-## Firm profile
+## What this implies for the product
 
-| Dimension | Assumption |
-| --- | --- |
-| **Ownership** | Owner-operated (decision-maker is close to day-to-day operations). |
-| **Trade / domain** | Residential **heat pump** maintenance (not generic “any HVAC” unless we broaden this doc deliberately). |
-| **Size** | **3–20 employees** — small enough that roles blur; large enough for scheduling and handoff friction. |
-| **Technician work pattern** | **Multiple jobs per day** per technician — context switching, mobile use, and incomplete same-day capture are normal. |
-| **Back-office pain** | **Manual chasing** of missing job details **before invoicing** — billing is blocked or delayed by information gaps from the field. |
+- **Small team, high trust, low tolerance for admin overhead.** Flows should stay short; defaults and mobile-first matter.
+- **Recurring work is the spine of the business.** Scheduling, route density, and “next visit” context are first-class—not only one-off installs.
+- **Owner is often in the field.** They need the same clarity as dispatch, sometimes switching hats in one day.
+- **Billing integrity = field reporting quality.** Capture at the moment of work beats reconstructing from memory; validation and gentle completeness nudges beat punitive forms.
+- **Finland / HVAC context.** Metric units, local norms for seasons and heating-dominated loads, and Finnish language expectations in UI and comms when the product ships for this market.
 
-## What we optimize for
+## Anti-patterns (things this avatar is *not*)
 
-When trade-offs appear, prefer outcomes that:
+- Enterprise facilities with dedicated asset managers and procurement portals.
+- Pure project-based commercial construction with long Gantt horizons and no recurrence.
+- Teams where invoicing is entirely decoupled from technician input (e.g. fixed retainers only).
 
-1. Reduce **time from job complete to invoice-ready** by making job information **complete and structured** without extra office chasing.
-2. Fit **technicians on the move** (quick inputs, minimal friction between jobs).
-3. Respect **small teams** (simple permissions, low admin overhead, no enterprise-only assumptions).
-
-## Out of scope (until we change this doc)
-
-Companies that are a poor default fit include: large commercial-only fleets, pure dispatch software buyers with no invoicing pain, or orgs where job data is already fully captured in another system of record with no gap before billing.
-
-_Update this section when we intentionally expand or narrow the ICP._
+When a feature only serves those patterns, treat it as lower priority unless another avatar is explicitly adopted.

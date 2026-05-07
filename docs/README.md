@@ -1,9 +1,16 @@
 # Documentation
 
-## Product
+Product and engineering notes for this repository.
 
-- [Avatar (ideal customer profile)](product/avatar.md) — who we build for and the operational reality we assume.
+## Contents
 
-## Engineering
+| Document | Purpose |
+| -------- | ------- |
+| [Product avatar](product/avatar.md) | Primary customer persona the product is designed around—use for prioritization, UX copy, and scope decisions. |
 
-_Add guides here as the stack and workflows land (local setup, Convex, deployment, testing)._
+## Conventions
+
+- **Product docs** live under `docs/product/`.
+- **Design specs** (when using the superpowers workflow) can live under `docs/superpowers/specs/` as dated markdown files.
+
+Add new topical docs here and link them from this index.
