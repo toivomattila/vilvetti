@@ -32,4 +32,3 @@ Thumbs.db
 # Cursor: keep cloud agent config in repo; ignore other local IDE files
 .cursor/*
 !.cursor/environment.json
-
