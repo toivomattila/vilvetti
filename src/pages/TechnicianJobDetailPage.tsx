@@ -6,7 +6,8 @@ import {
   useRef,
   useState,
 } from 'react'
-import type { FormEvent, PointerEvent } from 'react'
+import { X } from 'lucide-react'
+import type { ChangeEvent, FormEvent, PointerEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Id } from '../../convex/_generated/dataModel'
 import { api } from '../../convex/_generated/api'
@@ -20,6 +21,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatAppointmentDate } from '@/lib/date'
 import { JOB_STATUS_LABELS } from '@/lib/jobs'
 import { uploadBlobToConvexStorage } from '@/lib/upload'
+
+type StagedPhoto = {
+  id: string
+  file: File
+  previewUrl: string
+}
 
 export function TechnicianJobDetailPage() {
   const navigate = useNavigate()
@@ -41,7 +48,9 @@ export function TechnicianJobDetailPage() {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const canvasContainerRef = useRef<HTMLDivElement | null>(null)
+  const stagedPhotosRef = useRef<StagedPhoto[]>([])
   const drawingRef = useRef(false)
+  const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([])
   const [hasSignature, setHasSignature] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -96,6 +105,55 @@ export function TechnicianJobDetailPage() {
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [isDirty])
+
+  useEffect(() => {
+    stagedPhotosRef.current = stagedPhotos
+  }, [stagedPhotos])
+
+  useEffect(() => {
+    return () => {
+      for (const photo of stagedPhotosRef.current) {
+        URL.revokeObjectURL(photo.previewUrl)
+      }
+    }
+  }, [])
+
+  function addStagedFiles(fileList: FileList | File[]) {
+    const incoming = Array.from(fileList).filter(
+      (file) => file.size > 0 && file.type.startsWith('image/'),
+    )
+    if (incoming.length === 0) {
+      return
+    }
+    setStagedPhotos((prev) => [
+      ...prev,
+      ...incoming.map((file) => ({
+        id: crypto.randomUUID(),
+        file,
+        previewUrl: URL.createObjectURL(file),
+      })),
+    ])
+    setIsDirty(true)
+  }
+
+  function removeStagedPhoto(photoId: string) {
+    setStagedPhotos((prev) => {
+      const target = prev.find((p) => p.id === photoId)
+      if (target) {
+        URL.revokeObjectURL(target.previewUrl)
+      }
+      return prev.filter((p) => p.id !== photoId)
+    })
+    setIsDirty(true)
+  }
+
+  function handlePhotosInputChange(event: ChangeEvent<HTMLInputElement>) {
+    const { files } = event.target
+    if (files?.length) {
+      addStagedFiles(files)
+    }
+    event.target.value = ''
+  }
 
   function withCanvasContext(
     callback: (
@@ -193,9 +251,7 @@ export function TechnicianJobDetailPage() {
     const laborHoursRaw = Number(formData.get('laborHours') ?? 0)
     const materialsUsed = String(formData.get('materialsUsed') ?? '')
     const notes = String(formData.get('notes') ?? '')
-    const photos = Array.from(formData.getAll('photos')).filter(
-      (entry): entry is File => entry instanceof File && entry.size > 0,
-    )
+    const photos = stagedPhotos.map((p) => p.file)
 
     if (Number.isNaN(laborHoursRaw)) {
       setError('Labor hours must be a number.')
@@ -367,9 +423,36 @@ export function TechnicianJobDetailPage() {
                   accept="image/*"
                   id="photos"
                   multiple
-                  name="photos"
+                  onChange={handlePhotosInputChange}
                   type="file"
                 />
+                {stagedPhotos.length > 0 ? (
+                  <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                    {stagedPhotos.map((photo) => (
+                      <li className="relative aspect-square" key={photo.id}>
+                        <img
+                          alt={
+                            photo.file.name
+                              ? `Preview: ${photo.file.name}`
+                              : 'Photo preview'
+                          }
+                          className="size-full rounded-md border object-cover"
+                          src={photo.previewUrl}
+                        />
+                        <Button
+                          aria-label={`Remove ${photo.file.name || 'photo'}`}
+                          className="absolute right-1 top-1 size-8 p-0"
+                          onClick={() => removeStagedPhoto(photo.id)}
+                          size="icon"
+                          type="button"
+                          variant="secondary"
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
               <Separator />
               <div className="space-y-2">
