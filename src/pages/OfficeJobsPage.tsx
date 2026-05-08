@@ -7,7 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatAppointmentDate } from '@/lib/date'
-import { JOB_STATUS_LABELS, JOB_STATUSES } from '@/lib/jobs'
+import {
+  isCloseoutSubmitted,
+  JOB_STATUS_LABELS,
+  JOB_STATUSES,
+} from '@/lib/jobs'
 import type { JobStatus } from '@/lib/jobs'
 
 const ALL_STATUSES_VALUE = 'all'
@@ -121,32 +125,51 @@ export function OfficeJobsPage() {
         </Card>
       ) : (
         <>
-          {results.map((job) => (
-            <Card key={job._id}>
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-3">
-                  <CardTitle className="text-base">
-                    {job.customerName}
-                  </CardTitle>
-                  <Badge variant="secondary">
-                    {JOB_STATUS_LABELS[job.status]}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <p>{job.customerAddress}</p>
-                <div className="grid gap-1 text-muted-foreground sm:grid-cols-2">
-                  <p>
-                    Appointment: {formatAppointmentDate(job.appointmentDate)}
-                  </p>
-                  <p>Technician: {job.technicianDisplayName ?? 'Unassigned'}</p>
-                </div>
-                <Button asChild className="w-full sm:w-auto" variant="outline">
-                  <Link to={`/office/jobs/${job._id}`}>View details</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          {results.map((job) => {
+            const closeoutSubmitted = isCloseoutSubmitted(job)
+            return (
+              <Card key={job._id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <CardTitle className="text-base">
+                      {job.customerName}
+                    </CardTitle>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                      <Badge variant="secondary">
+                        {JOB_STATUS_LABELS[job.status]}
+                      </Badge>
+                      <Badge
+                        className="font-normal"
+                        variant={closeoutSubmitted ? 'default' : 'outline'}
+                      >
+                        {closeoutSubmitted
+                          ? 'Closeout submitted'
+                          : 'Awaiting closeout'}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <p>{job.customerAddress}</p>
+                  <div className="grid gap-1 text-muted-foreground sm:grid-cols-2">
+                    <p>
+                      Appointment: {formatAppointmentDate(job.appointmentDate)}
+                    </p>
+                    <p>
+                      Technician: {job.technicianDisplayName ?? 'Unassigned'}
+                    </p>
+                  </div>
+                  <Button
+                    asChild
+                    className="w-full sm:w-auto"
+                    variant="outline"
+                  >
+                    <Link to={`/office/jobs/${job._id}`}>View details</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )
+          })}
           {status === 'CanLoadMore' ? (
             <Button
               className="w-full sm:w-auto"
