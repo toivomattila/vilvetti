@@ -1,5 +1,11 @@
 import { useMutation, useQuery } from 'convex/react'
-import { useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import type { FormEvent, PointerEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Id } from '../../convex/_generated/dataModel'
@@ -26,14 +32,58 @@ export function TechnicianJobDetailPage() {
   )
   const startJob = useMutation(api.jobs.startJob)
   const submitCloseout = useMutation(api.jobs.submitCloseout)
-  const generateUploadUrl = useMutation(api.storage.generateUploadUrl)
+  const generateUploadUrlMutation = useMutation(api.storage.generateUploadUrl)
+
+  const getUploadUrl = useCallback(
+    () => generateUploadUrlMutation({ jobId }),
+    [generateUploadUrlMutation, jobId],
+  )
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
+  const canvasContainerRef = useRef<HTMLDivElement | null>(null)
   const drawingRef = useRef(false)
   const [hasSignature, setHasSignature] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
+
+  useLayoutEffect(() => {
+    const canvas = canvasRef.current
+    const container = canvasContainerRef.current
+    if (!canvas || !container || detail?.job.status !== 'in_progress') {
+      return
+    }
+
+    function layoutCanvas() {
+      const el = canvasRef.current
+      const wrap = canvasContainerRef.current
+      if (!el || !wrap) {
+        return
+      }
+      const dpr = Math.min(Math.max(window.devicePixelRatio ?? 1, 1), 3)
+      const rect = wrap.getBoundingClientRect()
+      const cssWidth = rect.width
+      const cssHeight = rect.height
+      if (cssWidth < 2 || cssHeight < 2) {
+        return
+      }
+      el.width = Math.round(cssWidth * dpr)
+      el.height = Math.round(cssHeight * dpr)
+      const ctx = el.getContext('2d')
+      if (!ctx) {
+        return
+      }
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.scale(dpr, dpr)
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, cssWidth, cssHeight)
+    }
+
+    layoutCanvas()
+    const observer = new ResizeObserver(() => layoutCanvas())
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [detail?.job.status])
 
   useEffect(() => {
     if (!isDirty) {
@@ -102,7 +152,10 @@ export function TechnicianJobDetailPage() {
 
   function clearSignature() {
     withCanvasContext((context, canvas) => {
-      context.clearRect(0, 0, canvas.width, canvas.height)
+      const rect = canvas.getBoundingClientRect()
+      context.clearRect(0, 0, rect.width, rect.height)
+      context.fillStyle = '#ffffff'
+      context.fillRect(0, 0, rect.width, rect.height)
     })
     setHasSignature(false)
     setIsDirty(true)
@@ -156,7 +209,7 @@ export function TechnicianJobDetailPage() {
         const photoStorageId = await uploadBlobToConvexStorage(
           photo,
           photo.name,
-          generateUploadUrl,
+          getUploadUrl,
         )
         uploadedPhotoIds.push(photoStorageId)
       }
@@ -165,7 +218,7 @@ export function TechnicianJobDetailPage() {
       const signatureStorageId = await uploadBlobToConvexStorage(
         signatureBlob,
         `signature-${jobId}.png`,
-        generateUploadUrl,
+        getUploadUrl,
       )
 
       await submitCloseout({
@@ -264,6 +317,7 @@ export function TechnicianJobDetailPage() {
             >
               Start job
             </Button>
+            {error ? <p className="text-destructive text-sm">{error}</p> : null}
           </CardContent>
         </Card>
       ) : null}
@@ -330,17 +384,17 @@ export function TechnicianJobDetailPage() {
                     Clear
                   </Button>
                 </div>
-                <canvas
-                  className="w-full touch-none rounded-md border bg-white"
-                  height={180}
-                  onPointerCancel={stopDrawing}
-                  onPointerDown={startDrawing}
-                  onPointerLeave={stopDrawing}
-                  onPointerMove={continueDrawing}
-                  onPointerUp={stopDrawing}
-                  ref={canvasRef}
-                  width={800}
-                />
+                <div className="min-h-[180px] w-full" ref={canvasContainerRef}>
+                  <canvas
+                    className="w-full touch-none rounded-md border bg-white"
+                    onPointerCancel={stopDrawing}
+                    onPointerDown={startDrawing}
+                    onPointerLeave={stopDrawing}
+                    onPointerMove={continueDrawing}
+                    onPointerUp={stopDrawing}
+                    ref={canvasRef}
+                  />
+                </div>
               </div>
               {error ? (
                 <p className="text-destructive text-sm">{error}</p>
@@ -367,8 +421,6 @@ export function TechnicianJobDetailPage() {
           </CardContent>
         </Card>
       ) : null}
-
-      {error ? <p className="text-destructive text-sm">{error}</p> : null}
     </main>
   )
 }

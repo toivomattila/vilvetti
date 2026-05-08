@@ -149,6 +149,7 @@ export function OfficeJobDetailPage() {
 
     didAttemptMarkRef.current = true
     void markCloseoutViewed({ jobId }).catch((error: unknown) => {
+      didAttemptMarkRef.current = false
       setMarkError(
         error instanceof Error
           ? error.message

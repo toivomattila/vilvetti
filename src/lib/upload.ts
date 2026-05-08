@@ -20,7 +20,11 @@ export async function uploadBlobToConvexStorage(
   })
 
   if (!uploadResult.ok) {
-    throw new Error('Could not upload file. Please try again.')
+    const statusSuffix =
+      typeof uploadResult.status === 'number' && uploadResult.status > 0
+        ? ` (HTTP ${uploadResult.status})`
+        : ''
+    throw new Error(`Could not upload file${statusSuffix}. Please try again.`)
   }
 
   const payload = (await uploadResult.json()) as UploadResponse

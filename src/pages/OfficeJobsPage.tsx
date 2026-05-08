@@ -1,4 +1,5 @@
-import { useQuery } from 'convex/react'
+import { useMutation, usePaginatedQuery } from 'convex/react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../../convex/_generated/api'
 import { Badge } from '@/components/ui/badge'
@@ -19,9 +20,18 @@ export function OfficeJobsPage() {
       ? (statusParam as JobStatus)
       : undefined
 
-  const jobs = useQuery(api.jobs.listOfficeJobs, {
-    status: activeStatus,
-  })
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.jobs.listOfficeJobs,
+    { status: activeStatus },
+    { initialNumItems: 20 },
+  )
+
+  const ensureTechnicianInviteCode = useMutation(
+    api.profiles.ensureTechnicianInviteCode,
+  )
+  const [inviteCodeText, setInviteCodeText] = useState<string | null>(null)
+  const [inviteCodeError, setInviteCodeError] = useState<string | null>(null)
+  const [inviteLoading, setInviteLoading] = useState(false)
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
@@ -36,6 +46,50 @@ export function OfficeJobsPage() {
           <Link to="/office/jobs/new">New job</Link>
         </Button>
       </div>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">Technician access</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <p className="text-muted-foreground">
+            Technicians need your organization slug plus this invite code to
+            join. Share the code verbally or through a trusted channel.
+          </p>
+          {inviteCodeText ? (
+            <div className="space-y-1 break-all rounded-md border bg-muted/40 p-3 font-mono text-sm">
+              {inviteCodeText}
+            </div>
+          ) : null}
+          {inviteCodeError ? (
+            <p className="text-destructive text-sm">{inviteCodeError}</p>
+          ) : null}
+          <Button
+            disabled={inviteLoading}
+            onClick={() => {
+              setInviteCodeError(null)
+              setInviteLoading(true)
+              void ensureTechnicianInviteCode({})
+                .then((out) => setInviteCodeText(out.technicianInviteCode))
+                .catch((err: unknown) =>
+                  setInviteCodeError(
+                    err instanceof Error
+                      ? err.message
+                      : 'Could not load invite code.',
+                  ),
+                )
+                .finally(() => setInviteLoading(false))
+            }}
+            size="sm"
+            type="button"
+            variant="outline"
+          >
+            {inviteLoading
+              ? 'Loading…'
+              : 'Show / refresh technician invite code'}
+          </Button>
+        </CardContent>
+      </Card>
 
       <Tabs
         value={activeStatus ?? ALL_STATUSES_VALUE}
@@ -57,37 +111,53 @@ export function OfficeJobsPage() {
         </TabsList>
       </Tabs>
 
-      {jobs === undefined ? (
+      {results === undefined ? (
         <p className="text-sm text-muted-foreground">Loading jobs...</p>
-      ) : jobs.length === 0 ? (
+      ) : results.length === 0 ? (
         <Card>
           <CardContent className="pt-6 text-sm text-muted-foreground">
             No jobs match this filter.
           </CardContent>
         </Card>
       ) : (
-        jobs.map((job) => (
-          <Card key={job._id}>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between gap-3">
-                <CardTitle className="text-base">{job.customerName}</CardTitle>
-                <Badge variant="secondary">
-                  {JOB_STATUS_LABELS[job.status]}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <p>{job.customerAddress}</p>
-              <div className="grid gap-1 text-muted-foreground sm:grid-cols-2">
-                <p>Appointment: {formatAppointmentDate(job.appointmentDate)}</p>
-                <p>Technician: {job.technicianDisplayName ?? 'Unassigned'}</p>
-              </div>
-              <Button asChild className="w-full sm:w-auto" variant="outline">
-                <Link to={`/office/jobs/${job._id}`}>View details</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        ))
+        <>
+          {results.map((job) => (
+            <Card key={job._id}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between gap-3">
+                  <CardTitle className="text-base">
+                    {job.customerName}
+                  </CardTitle>
+                  <Badge variant="secondary">
+                    {JOB_STATUS_LABELS[job.status]}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <p>{job.customerAddress}</p>
+                <div className="grid gap-1 text-muted-foreground sm:grid-cols-2">
+                  <p>
+                    Appointment: {formatAppointmentDate(job.appointmentDate)}
+                  </p>
+                  <p>Technician: {job.technicianDisplayName ?? 'Unassigned'}</p>
+                </div>
+                <Button asChild className="w-full sm:w-auto" variant="outline">
+                  <Link to={`/office/jobs/${job._id}`}>View details</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+          {status === 'CanLoadMore' ? (
+            <Button
+              className="w-full sm:w-auto"
+              onClick={() => loadMore(20)}
+              type="button"
+              variant="secondary"
+            >
+              Load more
+            </Button>
+          ) : null}
+        </>
       )}
     </main>
   )

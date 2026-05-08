@@ -34,10 +34,18 @@ export function OnboardingPage() {
     try {
       if (mode === 'office') {
         const organizationName = String(formData.get('organizationName') ?? '')
-        await createOffice({ organizationName, slug, displayName })
+        const result = await createOffice({
+          organizationName,
+          slug,
+          displayName,
+        })
+        window.alert(
+          `Save this technician invite code somewhere safe:\n\n${result.technicianInviteCode}\n\nTechnicians need this code plus your organization slug to join. You can view or refresh it anytime from Office jobs → Technician access.`,
+        )
         navigate('/office', { replace: true })
       } else {
-        await joinAsTechnician({ slug, displayName })
+        const inviteCode = String(formData.get('inviteCode') ?? '')
+        await joinAsTechnician({ slug, displayName, inviteCode })
         navigate('/field', { replace: true })
       }
     } catch (mutationError) {
@@ -83,11 +91,21 @@ export function OnboardingPage() {
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label htmlFor="slug">
-                {mode === 'office' ? 'Organization slug' : 'Join code'}
-              </Label>
+              <Label htmlFor="slug">Organization slug</Label>
               <Input id="slug" name="slug" placeholder="vilvetti" required />
             </div>
+            {mode === 'technician' ? (
+              <div className="space-y-2">
+                <Label htmlFor="inviteCode">Technician invite code</Label>
+                <Input
+                  autoComplete="off"
+                  id="inviteCode"
+                  name="inviteCode"
+                  placeholder="From your office coordinator"
+                  required
+                />
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="displayName">Display name</Label>
               <Input
