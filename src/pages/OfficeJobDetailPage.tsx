@@ -7,8 +7,104 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
+import {
+  buildCloseoutPasteText,
+  type CloseoutPasteInput,
+} from '@/lib/closeoutText'
 import { formatAppointmentDate } from '@/lib/date'
 import { JOB_STATUS_LABELS } from '@/lib/jobs'
+
+function jobHasPostSubmitCloseoutFields(job: {
+  submittedAt?: number
+  workCompleted: string | null
+  laborHours: number | null
+  materialsUsed: string | null
+  notes: string | null
+  photoStorageIds: string[]
+  signatureStorageId?: string
+}): boolean {
+  return (
+    job.submittedAt != null ||
+    (job.workCompleted != null && job.workCompleted.trim() !== '') ||
+    job.laborHours != null ||
+    (job.materialsUsed != null && job.materialsUsed.trim() !== '') ||
+    (job.notes != null && job.notes.trim() !== '') ||
+    job.photoStorageIds.length > 0 ||
+    Boolean(job.signatureStorageId)
+  )
+}
+
+function CloseoutCopyButton({
+  pastePayload,
+}: {
+  pastePayload: CloseoutPasteInput
+}) {
+  const [copyCloseoutStatus, setCopyCloseoutStatus] = useState<
+    'idle' | 'copying' | 'copied'
+  >('idle')
+  const copySuccessTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  )
+
+  useEffect(() => {
+    return () => {
+      if (copySuccessTimeoutRef.current) {
+        clearTimeout(copySuccessTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  async function handleCopyCloseoutText() {
+    const text = buildCloseoutPasteText(pastePayload)
+
+    setCopyCloseoutStatus('copying')
+    let copied = false
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+        copied = true
+      }
+    } catch {
+      copied = false
+    }
+    if (!copied) {
+      window.prompt('Copy closeout text (select all, then copy)', text)
+    }
+    if (copySuccessTimeoutRef.current) {
+      clearTimeout(copySuccessTimeoutRef.current)
+    }
+    setCopyCloseoutStatus('copied')
+    copySuccessTimeoutRef.current = setTimeout(() => {
+      setCopyCloseoutStatus('idle')
+      copySuccessTimeoutRef.current = null
+    }, 2000)
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 pt-1">
+      <span aria-live="polite" className="sr-only">
+        {copyCloseoutStatus === 'copied'
+          ? 'Closeout text copied to clipboard.'
+          : ''}
+      </span>
+      <Button
+        disabled={copyCloseoutStatus === 'copying'}
+        onClick={() => {
+          void handleCopyCloseoutText()
+        }}
+        size="sm"
+        type="button"
+        variant="outline"
+      >
+        {copyCloseoutStatus === 'copying'
+          ? 'Copying…'
+          : copyCloseoutStatus === 'copied'
+            ? 'Copied'
+            : 'Copy closeout text'}
+      </Button>
+    </div>
+  )
+}
 
 export function OfficeJobDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -33,6 +129,17 @@ export function OfficeJobDetailPage() {
     return (
       detail.job.status === 'completed' || detail.job.status === 'invoice_ready'
     )
+  }, [detail])
+
+  const canCopyCloseout = useMemo(() => {
+    if (!detail) {
+      return false
+    }
+    const { job } = detail
+    if (job.status === 'completed' || job.status === 'invoice_ready') {
+      return true
+    }
+    return jobHasPostSubmitCloseoutFields(job)
   }, [detail])
 
   useEffect(() => {
@@ -64,6 +171,20 @@ export function OfficeJobDetailPage() {
 
   const canRelease = detail.job.status === 'completed'
   const viewed = Boolean(detail.job.closeoutViewedAt)
+
+  const closeoutPastePayload: CloseoutPasteInput = {
+    customerName: detail.job.customerName,
+    customerAddress: detail.job.customerAddress,
+    appointmentDateMs: detail.job.appointmentDate,
+    technicianDisplayName: detail.technicianDisplayName,
+    problemDescription: detail.job.problemDescription,
+    workCompleted: detail.job.workCompleted,
+    laborHours: detail.job.laborHours,
+    materialsUsed: detail.job.materialsUsed,
+    notes: detail.job.notes,
+    submittedAt: detail.job.submittedAt,
+    submittedByDisplayName: detail.submittedBy?.displayName,
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
@@ -127,6 +248,13 @@ export function OfficeJobDetailPage() {
           <p>
             <strong>Notes:</strong> {detail.job.notes ?? '—'}
           </p>
+
+          {canCopyCloseout ? (
+            <CloseoutCopyButton
+              key={jobId}
+              pastePayload={closeoutPastePayload}
+            />
+          ) : null}
 
           <Separator />
           <div className="space-y-2">
