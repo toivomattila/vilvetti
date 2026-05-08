@@ -44,7 +44,7 @@ export function loadCloseoutDraft(jobId: string): CloseoutDraftPayload | null {
   }
 }
 
-export function closeoutDraftFieldsEmpty(draft: CloseoutDraftPayload): boolean {
+function closeoutDraftFieldsEmpty(draft: CloseoutDraftPayload): boolean {
   const laborUnset =
     draft.laborHours === null ||
     draft.laborHours === undefined ||

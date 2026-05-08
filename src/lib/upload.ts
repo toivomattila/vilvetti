@@ -5,7 +5,7 @@ type UploadResponse = {
 }
 
 /** True when the failure is likely due to connectivity, not validation or server logic. */
-export function isLikelyConnectivityFailure(error: unknown): boolean {
+function isLikelyConnectivityFailure(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false
   }

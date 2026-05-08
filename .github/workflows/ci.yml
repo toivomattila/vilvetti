@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint, format, build, test
+    name: Lint, format, build, test, knip
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +36,9 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      - name: Knip
+        run: npm run knip
 
   convex-deploy:
     name: Deploy Convex (production)

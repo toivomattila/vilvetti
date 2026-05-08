@@ -1,5 +1,5 @@
 /** Max encoded size per closeout photo before upload (bytes). */
-export const MAX_CLOSEOUT_PHOTO_BYTES = 8 * 1024 * 1024
+const MAX_CLOSEOUT_PHOTO_BYTES = 8 * 1024 * 1024
 
 /** Max longest side in pixels after prep. */
 export const MAX_CLOSEOUT_PHOTO_DIMENSION = 2048
