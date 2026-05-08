@@ -120,16 +120,7 @@ export function OfficeJobDetailPage() {
   const [markError, setMarkError] = useState<string | null>(null)
   const [releaseError, setReleaseError] = useState<string | null>(null)
   const [isReleasing, setIsReleasing] = useState(false)
-  const didAttemptMarkRef = useRef(false)
-
-  const shouldMarkViewed = useMemo(() => {
-    if (!detail) {
-      return false
-    }
-    return (
-      detail.job.status === 'completed' || detail.job.status === 'invoice_ready'
-    )
-  }, [detail])
+  const [isMarkingReviewed, setIsMarkingReviewed] = useState(false)
 
   const canCopyCloseout = useMemo(() => {
     if (!detail) {
@@ -142,21 +133,21 @@ export function OfficeJobDetailPage() {
     return jobHasPostSubmitCloseoutFields(job)
   }, [detail])
 
-  useEffect(() => {
-    if (!id || !detail || !shouldMarkViewed || didAttemptMarkRef.current) {
-      return
-    }
-
-    didAttemptMarkRef.current = true
-    void markCloseoutViewed({ jobId }).catch((error: unknown) => {
-      didAttemptMarkRef.current = false
+  async function handleMarkCloseoutReviewed() {
+    setMarkError(null)
+    setIsMarkingReviewed(true)
+    try {
+      await markCloseoutViewed({ jobId })
+    } catch (error: unknown) {
       setMarkError(
         error instanceof Error
           ? error.message
-          : 'Could not mark closeout as viewed.',
+          : 'Could not mark closeout as reviewed.',
       )
-    })
-  }, [detail, id, jobId, markCloseoutViewed, shouldMarkViewed])
+    } finally {
+      setIsMarkingReviewed(false)
+    }
+  }
 
   if (!id) {
     return <p className="text-destructive p-4 text-sm">Missing job id.</p>
@@ -171,7 +162,10 @@ export function OfficeJobDetailPage() {
   }
 
   const canRelease = detail.job.status === 'completed'
-  const viewed = Boolean(detail.job.closeoutViewedAt)
+  const reviewed = Boolean(detail.job.closeoutViewedAt)
+  const showMarkReviewed =
+    !reviewed &&
+    (detail.job.status === 'completed' || detail.job.status === 'invoice_ready')
 
   const closeoutPastePayload: CloseoutPasteInput = {
     customerName: detail.job.customerName,
@@ -305,38 +299,54 @@ export function OfficeJobDetailPage() {
           </div>
 
           <Separator />
-          <div className="space-y-2">
+          <div className="space-y-3">
             <p>
-              Closeout viewed:{' '}
-              {viewed
+              Closeout reviewed:{' '}
+              {reviewed
                 ? new Date(detail.job.closeoutViewedAt!).toLocaleString()
-                : 'No'}
+                : 'Not yet'}
             </p>
-            <Button
-              disabled={!canRelease || !viewed || isReleasing}
-              onClick={() => {
-                setReleaseError(null)
-                setIsReleasing(true)
-                void releaseForInvoicing({ jobId })
-                  .catch((error: unknown) => {
-                    setReleaseError(
-                      error instanceof Error
-                        ? error.message
-                        : 'Could not release job for invoicing.',
-                    )
-                  })
-                  .finally(() => setIsReleasing(false))
-              }}
-              type="button"
-            >
-              {detail.job.status === 'invoice_ready'
-                ? 'Released for invoicing'
-                : isReleasing
-                  ? 'Releasing...'
-                  : 'Release for invoicing'}
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+              {showMarkReviewed ? (
+                <Button
+                  disabled={isMarkingReviewed}
+                  onClick={() => {
+                    void handleMarkCloseoutReviewed()
+                  }}
+                  type="button"
+                >
+                  {isMarkingReviewed ? 'Saving…' : 'Mark closeout reviewed'}
+                </Button>
+              ) : null}
+              <Button
+                disabled={!canRelease || !reviewed || isReleasing}
+                onClick={() => {
+                  setReleaseError(null)
+                  setIsReleasing(true)
+                  void releaseForInvoicing({ jobId })
+                    .catch((error: unknown) => {
+                      setReleaseError(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not release job for invoicing.',
+                      )
+                    })
+                    .finally(() => setIsReleasing(false))
+                }}
+                type="button"
+                variant="secondary"
+              >
+                {detail.job.status === 'invoice_ready'
+                  ? 'Released for invoicing'
+                  : isReleasing
+                    ? 'Releasing...'
+                    : 'Release for invoicing'}
+              </Button>
+            </div>
             {markError ? (
-              <p className="text-destructive text-sm">{markError}</p>
+              <p className="text-destructive text-sm" role="alert">
+                {markError}
+              </p>
             ) : null}
             {releaseError ? (
               <p className="text-destructive text-sm">{releaseError}</p>

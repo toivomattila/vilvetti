@@ -458,7 +458,7 @@ export const releaseForInvoicing = mutation({
     }
     if (!job.closeoutViewedAt) {
       throw new Error(
-        'Open the closeout details before releasing the job for invoicing.',
+        'Mark the closeout as reviewed before releasing the job for invoicing.',
       )
     }
 
