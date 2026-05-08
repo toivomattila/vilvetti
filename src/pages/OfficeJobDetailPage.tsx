@@ -260,7 +260,7 @@ export function OfficeJobDetailPage() {
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {detail.photoUrls.map((photo) => (
                   <a
-                    className="overflow-hidden rounded-md border"
+                    className="focus-visible:ring-ring overflow-hidden rounded-md border ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
                     href={photo.url ?? '#'}
                     key={photo.storageId}
                     rel="noreferrer"
@@ -286,7 +286,12 @@ export function OfficeJobDetailPage() {
           <div className="space-y-2">
             <p className="font-medium">Signature</p>
             {detail.signatureUrl ? (
-              <a href={detail.signatureUrl} rel="noreferrer" target="_blank">
+              <a
+                className="focus-visible:ring-ring inline-block rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+                href={detail.signatureUrl}
+                rel="noreferrer"
+                target="_blank"
+              >
                 <img
                   alt="Customer signature"
                   className="h-28 rounded-md border object-contain p-2"
