@@ -86,6 +86,7 @@ type AuthorizedJobDetail = {
   job: Doc<'jobs'>
   technicianDisplayName: string | null
   submittedBy: { userId: Id<'users'>; displayName: string } | null
+  releasedBy: { userId: Id<'users'>; displayName: string } | null
 }
 
 async function getAuthorizedJobDetail(
@@ -131,6 +132,23 @@ async function getAuthorizedJobDetail(
         }
       : null
 
+  const releasedByUserId = checkedJob.releasedByUserId
+  const releasedByProfile = releasedByUserId
+    ? await ctx.db
+        .query('profiles')
+        .withIndex('by_userId', (q) => q.eq('userId', releasedByUserId))
+        .unique()
+    : null
+
+  const releasedBy =
+    releasedByProfile &&
+    releasedByProfile.organizationId === checkedJob.organizationId
+      ? {
+          userId: releasedByProfile.userId,
+          displayName: releasedByProfile.displayName,
+        }
+      : null
+
   return {
     job: checkedJob,
     technicianDisplayName:
@@ -138,6 +156,7 @@ async function getAuthorizedJobDetail(
         ? technicianProfile.displayName
         : null,
     submittedBy,
+    releasedBy,
   }
 }
 

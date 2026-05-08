@@ -312,6 +312,30 @@ export function OfficeJobDetailPage() {
                 ? new Date(detail.job.closeoutViewedAt!).toLocaleString()
                 : 'No'}
             </p>
+            {detail.job.status === 'completed' ||
+            detail.job.status === 'invoice_ready' ? (
+              <div className="space-y-1 rounded-md border bg-muted/30 p-3">
+                <p className="font-medium">Invoicing release</p>
+                {detail.job.status === 'invoice_ready' ? (
+                  <>
+                    <p>
+                      Released:{' '}
+                      {detail.job.releasedForInvoiceAt
+                        ? new Date(
+                            detail.job.releasedForInvoiceAt,
+                          ).toLocaleString()
+                        : '—'}
+                    </p>
+                    <p>
+                      Released by:{' '}
+                      {detail.releasedBy?.displayName ?? 'Not available'}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">Not released</p>
+                )}
+              </div>
+            ) : null}
             <Button
               disabled={!canRelease || !viewed || isReleasing}
               onClick={() => {
