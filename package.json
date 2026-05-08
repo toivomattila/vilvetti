@@ -13,7 +13,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "knip": "knip --no-progress"
+    "knip": "knip --no-progress",
+    "prepare": "husky"
   },
   "dependencies": {
     "@auth/core": "^0.37.0",
@@ -47,8 +48,10 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "eslint-plugin-unused-imports": "^4.4.1",
     "globals": "^17.5.0",
+    "husky": "^9.1.7",
     "jose": "^5.10.0",
     "knip": "^6.12.1",
+    "lint-staged": "^16.4.0",
     "postcss": "^8.5.1",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
@@ -58,5 +61,12 @@
     "typescript-eslint": "^8.58.2",
     "vite": "^8.0.10",
     "vitest": "^4.1.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{mjs,cjs,json,css,md}": "prettier --write"
   }
 }
