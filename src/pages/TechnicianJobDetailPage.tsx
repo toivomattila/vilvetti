@@ -19,7 +19,10 @@ import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { formatAppointmentDate } from '@/lib/date'
 import { JOB_STATUS_LABELS } from '@/lib/jobs'
-import { uploadBlobToConvexStorage } from '@/lib/upload'
+import {
+  describeConnectivityError,
+  uploadBlobToConvexStorage,
+} from '@/lib/upload'
 
 export function TechnicianJobDetailPage() {
   const navigate = useNavigate()
@@ -41,11 +44,15 @@ export function TechnicianJobDetailPage() {
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const canvasContainerRef = useRef<HTMLDivElement | null>(null)
+  const closeoutFormRef = useRef<HTMLFormElement | null>(null)
   const drawingRef = useRef(false)
   const [hasSignature, setHasSignature] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDirty, setIsDirty] = useState(false)
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator !== 'undefined' && navigator.onLine,
+  )
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current
@@ -96,6 +103,17 @@ export function TechnicianJobDetailPage() {
     window.addEventListener('beforeunload', onBeforeUnload)
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [isDirty])
+
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true)
+    const onOffline = () => setIsOnline(false)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
+    }
+  }, [])
 
   function withCanvasContext(
     callback: (
@@ -233,11 +251,7 @@ export function TechnicianJobDetailPage() {
       setIsDirty(false)
       navigate('/field', { replace: true })
     } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Could not submit closeout.',
-      )
+      setError(describeConnectivityError(submitError))
     } finally {
       setIsSubmitting(false)
     }
@@ -306,11 +320,7 @@ export function TechnicianJobDetailPage() {
               onClick={() => {
                 setError(null)
                 void startJob({ jobId }).catch((startError: unknown) => {
-                  setError(
-                    startError instanceof Error
-                      ? startError.message
-                      : 'Could not start this job.',
-                  )
+                  setError(describeConnectivityError(startError))
                 })
               }}
               type="button"
@@ -328,10 +338,20 @@ export function TechnicianJobDetailPage() {
             <CardTitle>Submit closeout</CardTitle>
           </CardHeader>
           <CardContent>
+            {!isOnline ? (
+              <p
+                className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                role="status"
+              >
+                You appear to be offline. Connect to the internet, then submit
+                the closeout or tap Retry after you are back online.
+              </p>
+            ) : null}
             <form
               className="space-y-4"
               onChange={() => setIsDirty(true)}
               onSubmit={handleSubmit}
+              ref={closeoutFormRef}
             >
               <div className="space-y-2">
                 <Label htmlFor="workCompleted">Work completed</Label>
@@ -397,7 +417,18 @@ export function TechnicianJobDetailPage() {
                 </div>
               </div>
               {error ? (
-                <p className="text-destructive text-sm">{error}</p>
+                <div className="border-destructive/30 bg-destructive/5 flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-start sm:justify-between">
+                  <p className="text-destructive text-sm">{error}</p>
+                  <Button
+                    disabled={isSubmitting}
+                    onClick={() => closeoutFormRef.current?.requestSubmit()}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Retry
+                  </Button>
+                </div>
               ) : null}
               <Button
                 className="w-full sm:w-auto"
