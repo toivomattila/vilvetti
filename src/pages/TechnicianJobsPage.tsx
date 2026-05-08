@@ -31,7 +31,7 @@ export function TechnicianJobsPage() {
           <label className="flex-1 space-y-1 text-sm sm:max-w-xs">
             <span className="text-muted-foreground">Select day</span>
             <input
-              className="border-input w-full rounded-md border bg-background px-3 py-2 text-base"
+              className="border-input focus-visible:ring-ring min-h-11 w-full rounded-md border bg-background px-3 py-2 text-base ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
               onChange={(event) => setDateInputValue(event.target.value)}
               type="date"
               value={dateInputValue}
