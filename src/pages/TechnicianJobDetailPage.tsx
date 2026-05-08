@@ -24,6 +24,13 @@ import {
   type CloseoutFieldErrors,
 } from '@/lib/closeoutFieldErrors'
 import { formatAppointmentDate } from '@/lib/date'
+import {
+  clearCloseoutDraft,
+  laborHoursDraftToInput,
+  laborHoursToDraftValue,
+  loadCloseoutDraft,
+  persistCloseoutDraft,
+} from '@/lib/closeoutDraft'
 import { prepareCloseoutPhoto } from '@/lib/imageUploadPrep'
 import { JOB_STATUS_LABELS } from '@/lib/jobs'
 import { uploadBlobToConvexStorage } from '@/lib/upload'
@@ -33,6 +40,8 @@ type StagedPhoto = {
   file: File
   previewUrl: string
 }
+
+const CLOSEOUT_DRAFT_DEBOUNCE_MS = 500
 
 export function TechnicianJobDetailPage() {
   const navigate = useNavigate()
@@ -62,6 +71,72 @@ export function TechnicianJobDetailPage() {
   const [startJobError, setStartJobError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<CloseoutFieldErrors>({})
   const [isDirty, setIsDirty] = useState(false)
+
+  const [workCompleted, setWorkCompleted] = useState('')
+  const [laborHoursInput, setLaborHoursInput] = useState('')
+  const [materialsUsed, setMaterialsUsed] = useState('')
+  const [notes, setNotes] = useState('')
+
+  const closeoutRestoredJobRef = useRef<string | null>(null)
+  const closeoutPersistAllowedRef = useRef(false)
+
+  useEffect(() => {
+    if (detail?.job.status !== 'in_progress' || !id) {
+      closeoutRestoredJobRef.current = null
+      closeoutPersistAllowedRef.current = false
+      return
+    }
+
+    if (closeoutRestoredJobRef.current === id) {
+      closeoutPersistAllowedRef.current = true
+      return
+    }
+
+    const draft = loadCloseoutDraft(id)
+    setWorkCompleted(draft?.workCompleted ?? '')
+    setLaborHoursInput(laborHoursDraftToInput(draft?.laborHours ?? null))
+    setMaterialsUsed(draft?.materialsUsed ?? '')
+    setNotes(draft?.notes ?? '')
+
+    const hasDraftText =
+      (draft?.workCompleted.trim() ?? '') !== '' ||
+      (draft?.materialsUsed.trim() ?? '') !== '' ||
+      (draft?.notes.trim() ?? '') !== '' ||
+      draft?.laborHours != null
+
+    setIsDirty(hasDraftText)
+
+    closeoutRestoredJobRef.current = id
+    closeoutPersistAllowedRef.current = true
+  }, [detail?.job.status, id])
+
+  useEffect(() => {
+    if (
+      !closeoutPersistAllowedRef.current ||
+      detail?.job.status !== 'in_progress' ||
+      !id
+    ) {
+      return
+    }
+
+    const handle = window.setTimeout(() => {
+      persistCloseoutDraft(id, {
+        workCompleted,
+        laborHours: laborHoursToDraftValue(laborHoursInput),
+        materialsUsed,
+        notes,
+      })
+    }, CLOSEOUT_DRAFT_DEBOUNCE_MS)
+
+    return () => window.clearTimeout(handle)
+  }, [
+    detail?.job.status,
+    id,
+    laborHoursInput,
+    materialsUsed,
+    notes,
+    workCompleted,
+  ])
 
   useLayoutEffect(() => {
     const canvas = canvasRef.current
@@ -249,11 +324,9 @@ export function TechnicianJobDetailPage() {
       return
     }
 
-    const formData = new FormData(event.currentTarget)
-    const workCompleted = String(formData.get('workCompleted') ?? '')
-    const laborHoursRaw = Number(formData.get('laborHours') ?? 0)
-    const materialsUsed = String(formData.get('materialsUsed') ?? '')
-    const notes = String(formData.get('notes') ?? '')
+    const laborTrim = laborHoursInput.trim()
+    const laborHoursRaw =
+      laborTrim === '' ? Number.NaN : Number(laborHoursInput)
     const photos = stagedPhotos.map((p) => p.file)
 
     const clientErrors = validateCloseoutClient({
@@ -325,6 +398,7 @@ export function TechnicianJobDetailPage() {
         return
       }
 
+      clearCloseoutDraft(jobId)
       setIsDirty(false)
       navigate('/field', { replace: true })
     } finally {
@@ -421,11 +495,7 @@ export function TechnicianJobDetailPage() {
             <CardTitle>Submit closeout</CardTitle>
           </CardHeader>
           <CardContent>
-            <form
-              className="space-y-4"
-              onChange={() => setIsDirty(true)}
-              onSubmit={handleSubmit}
-            >
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <Label htmlFor="workCompleted">Work completed</Label>
                 <Textarea
@@ -437,8 +507,13 @@ export function TechnicianJobDetailPage() {
                   aria-invalid={!!fieldErrors.workCompleted}
                   id="workCompleted"
                   name="workCompleted"
+                  onChange={(e) => {
+                    setWorkCompleted(e.target.value)
+                    setIsDirty(true)
+                  }}
                   required
                   rows={4}
+                  value={workCompleted}
                 />
                 {fieldErrors.workCompleted ? (
                   <p
@@ -460,9 +535,14 @@ export function TechnicianJobDetailPage() {
                   id="laborHours"
                   min={0}
                   name="laborHours"
+                  onChange={(e) => {
+                    setLaborHoursInput(e.target.value)
+                    setIsDirty(true)
+                  }}
                   required
                   step={0.25}
                   type="number"
+                  value={laborHoursInput}
                 />
                 {fieldErrors.laborHours ? (
                   <p
@@ -476,11 +556,29 @@ export function TechnicianJobDetailPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="materialsUsed">Materials used</Label>
-                <Textarea id="materialsUsed" name="materialsUsed" rows={3} />
+                <Textarea
+                  id="materialsUsed"
+                  name="materialsUsed"
+                  onChange={(e) => {
+                    setMaterialsUsed(e.target.value)
+                    setIsDirty(true)
+                  }}
+                  rows={3}
+                  value={materialsUsed}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" name="notes" rows={3} />
+                <Textarea
+                  id="notes"
+                  name="notes"
+                  onChange={(e) => {
+                    setNotes(e.target.value)
+                    setIsDirty(true)
+                  }}
+                  rows={3}
+                  value={notes}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="photos">Photos</Label>
