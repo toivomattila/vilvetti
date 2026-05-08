@@ -158,33 +158,33 @@ End-to-end **core loop** only.
 
 ### Step B — Technician performs visit (physical)
 
-| Item              | Specification                                                                                                                                                                                          |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Trigger**       | Appointment time / technician arrives (real world).                                                                                                                                                    |
-| **Actions**       | Work happens on site; **product may be unused** during actual wrench time.                                                                                                                             |
-| **State**         | Technician moves job to **`In Progress`** when starting the visit or opening the job for closeout (exact trigger **Open Question** §13); must be **`In Progress`** before submit if enforcement is on. |
-| **Notifications** | None required.                                                                                                                                                                                         |
-| **Completion**    | Visit done; technician is ready to **close out in app**.                                                                                                                                               |
+| Item              | Specification                                                                                                                                             |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Trigger**       | Appointment time / technician arrives (real world).                                                                                                       |
+| **Actions**       | Work happens on site; **product may be unused** during actual wrench time.                                                                                |
+| **State**         | Technician moves job to **`In Progress`** via explicit **Start job** before closeout (see §13 **Decisions recorded**); submit requires **`In Progress`**. |
+| **Notifications** | None required.                                                                                                                                            |
+| **Completion**    | Visit done; technician is ready to **close out in app**.                                                                                                  |
 
 ### Step C — Technician submits structured closeout
 
-| Item              | Specification                                                                                                                                                                                                                                                                             |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Trigger**       | Visit complete; technician opens assigned job.                                                                                                                                                                                                                                            |
-| **Actions**       | Fill work completed, hours, materials, notes; upload photos; capture customer signature; **submit** closeout.                                                                                                                                                                             |
-| **State**         | On valid submit: job moves from **`In Progress`** to **`Completed`** (closeout persisted and locked). Coordinator then moves **`Completed`** → **`Invoice Ready`** after review (single explicit action, **P0**—see FR-13), unless pilot decides auto-advance (document decision in §13). |
-| **Notifications** | **In-app only:** job appears for office under **`Completed`** on next load or realtime update—no email/SMS.                                                                                                                                                                               |
-| **Completion**    | Closeout **immutable** for MVP after submit (no technician edit—see Open Questions if edit needed).                                                                                                                                                                                       |
+| Item              | Specification                                                                                                                                                                                                                                                                 |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Trigger**       | Visit complete; technician opens assigned job.                                                                                                                                                                                                                                |
+| **Actions**       | Fill work completed, hours, materials, notes; upload photos; capture customer signature; **submit** closeout.                                                                                                                                                                 |
+| **State**         | On valid submit: job moves from **`In Progress`** to **`Completed`** (closeout persisted and locked). Coordinator then moves **`Completed`** → **`Invoice Ready`** after review (single explicit action, **P0**—see FR-13); **no auto-advance** (§13 **Decisions recorded**). |
+| **Notifications** | **In-app only:** job appears for office under **`Completed`** on next load or realtime update—no email/SMS.                                                                                                                                                                   |
+| **Completion**    | Closeout **immutable** for MVP after submit (no technician edit—see §13 **Remaining open questions** if coordinator unlock is needed).                                                                                                                                        |
 
 ### Step D — Office reviews closeout and invoices externally
 
-| Item              | Specification                                                                                                                                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Trigger**       | Job is **`Completed`** (closeout submitted and visible).                                                                                                                                                       |
-| **Actions**       | Review read-only closeout; tap **Release for invoicing** when satisfied (**`Completed` → `Invoice Ready`**, FR-13) unless auto-advance applies; create invoice in **external** system using the closeout data. |
-| **State**         | After release: **`Invoice Ready`**. No further required states in MVP (optional “Marked invoiced” **non-goal** unless added later).                                                                            |
-| **Notifications** | None.                                                                                                                                                                                                          |
-| **Completion**    | Invoice created externally **without** calling technician for the captured fields; coordinator sign-off recorded if **`Invoice Ready`** is distinct from **`Completed`**.                                      |
+| Item              | Specification                                                                                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Trigger**       | Job is **`Completed`** (closeout submitted and visible).                                                                                                                           |
+| **Actions**       | Review read-only closeout; tap **Release for invoicing** when satisfied (**`Completed` → `Invoice Ready`**, FR-13); create invoice in **external** system using the closeout data. |
+| **State**         | After release: **`Invoice Ready`**. No further required states in MVP (optional “Marked invoiced” **non-goal** unless added later).                                                |
+| **Notifications** | None.                                                                                                                                                                              |
+| **Completion**    | Invoice created externally **without** calling technician for the captured fields; coordinator sign-off recorded if **`Invoice Ready`** is distinct from **`Completed`**.          |
 
 ---
 
@@ -199,17 +199,17 @@ End-to-end **core loop** only.
 | **FR-03** | **Create job**                           | Core loop entry.                                                              | Office can create job with: customer name, address, appointment date, notes/problem, assigned technician; job appears in office list and technician assignment list.                                                       | P0  |
 | **FR-04** | **List jobs (office)**                   | Coordinator triage.                                                           | Lists or filters show **Scheduled** (may include not-yet-started assignments), **In Progress**, **Completed** (closeout submitted, pending coordinator release), and **Invoice Ready** (released for external invoicing).  | P0  |
 | **FR-05** | **List assigned jobs (technician)**      | Field use.                                                                    | Technician sees jobs **assigned to them**; default filter **today** (with ability to see near-future/past if implemented—**P1** clarity in UI copy).                                                                       | P0  |
-| **FR-06** | **Start job (technician)**               | Aligns with MVP state **`In Progress`**.                                      | Technician can transition **`Scheduled` → `In Progress`** from their device before submitting closeout (exact UX: dedicated button vs implicit on open—Open Question §13).                                                 | P0  |
+| **FR-06** | **Start job (technician)**               | Aligns with MVP state **`In Progress`**.                                      | Technician can transition **`Scheduled` → `In Progress`** from their device (**Start job** before closeout—§13 **Decisions recorded**).                                                                                    | P0  |
 | **FR-07** | **Open job detail / closeout form**      | Data capture UI.                                                              | From list, technician opens job and sees all closeout fields + submit.                                                                                                                                                     | P0  |
 | **FR-08** | **Validate closeout**                    | Data must be complete before **`Completed`** status.                          | Submit blocked until required fields satisfied (define required set in §9); errors **field-level** and plain language.                                                                                                     | P0  |
 | **FR-09** | **Submit closeout**                      | Core value delivery.                                                          | Successful submit persists data; job becomes **`Completed`**; office can see **same values** read-only; technician cannot change after submit (MVP).                                                                       | P0  |
-| **FR-10** | **Photo upload**                         | Evidence for invoice/disputes.                                                | At least one photo **optional or required** per §13 Open Questions; files stored durably and viewable in office view.                                                                                                      | P0  |
+| **FR-10** | **Photo upload**                         | Evidence for invoice/disputes.                                                | Photos **optional**, capped per implementation (§13 **Decisions recorded**); files stored durably and viewable in office view.                                                                                             | P0  |
 | **FR-11** | **Customer signature**                   | Confirmation.                                                                 | Signature captured on device, stored, visible in office view (bitmap or vector acceptable).                                                                                                                                | P0  |
 | **FR-12** | **Office read closeout**                 | Invoice preparation.                                                          | Single screen shows all closeout fields + photos + signature + immutable timestamp of submit.                                                                                                                              | P0  |
-| **FR-13** | **Release job for invoicing**            | Separates “data captured” from “coordinator satisfied” per MVP state machine. | From **`Completed`**, office can transition job to **`Invoice Ready`** with one action after viewing closeout; cannot skip without viewing (or explicit waiver—Open Question §13).                                         | P0  |
+| **FR-13** | **Release job for invoicing**            | Separates “data captured” from “coordinator satisfied” per MVP state machine. | From **`Completed`**, office can transition job to **`Invoice Ready`** after viewing closeout (implementation enforces view-before-release—§13 **Decisions recorded**).                                                    | P0  |
 | **FR-14** | **Technician assignment visible in-app** | No external notifications MVP.                                                | New/updated assignment visible on list **without** email/SMS; realtime or pull-to-refresh **acceptable**—document chosen UX.                                                                                               | P0  |
 
-**Out of scope for FR:** reporting exports, bulk import, customer CRUD beyond job context, multi-technician reassignment mid-job (Open Question).
+**Out of scope for FR:** reporting exports, bulk import, customer CRUD beyond job context, reassigning a job **after** it is **`In Progress`** (while **`scheduled`**, office may reassign—§13 **Decisions recorded**).
 
 ---
 
@@ -329,19 +329,27 @@ Either **embedded on `Job`** or `JobCloseout` 1:1 table—choose one in implemen
 
 ## 13. Open Questions
 
-1. **Required vs optional photos:** minimum one photo required, or zero allowed if signature + text?
-2. **Labor hours:** integer only vs decimals; maximum per job sanity cap?
-3. **Materials:** free text vs line items with quantity—MVP says text acceptable; confirm with pilot.
-4. **Closeout immutability:** do coordinators ever need “unlock edit” for honest mistakes in week one?
-5. **In Progress state:** mandatory tap or infer only on submit?
-6. **Technician sees jobs:** strictly **appointment = today** or rolling ±N days?
-7. **Multi-technician reassignment** after create—allowed or rare enough to defer?
-8. **Offline / flaky network:** hard fail with message vs optimistic draft in localStorage?
-9. **Onboarding:** self-serve org signup vs manual seed for pilot?
-10. **Localization:** Finnish-only UI for MVP vs EN/FI toggle?
-11. **Customer PII retention:** default retention period and deletion request process.
-12. **Auth method:** magic link (email dependency for **auth only**—may be acceptable vs SMS) vs password vs social—**email for auth is not same as product notification email**; decide explicitly.
-13. **`Completed` vs `Invoice Ready`:** pilot may prefer **auto-advance** to `Invoice Ready` on submit to reduce office taps—if so, amend PRD (whether `Completed` is omitted or only internal).
+### Decisions recorded (implementation)
+
+The following reflect **current codebase behavior** (Vilvetti MVP); revisit if product intent changes.
+
+- **Explicit start job (`In Progress` before submit):** A technician must move a job from **`Scheduled` → `In Progress`** (e.g. **Start job**) before closeout can be submitted. Submit is rejected unless status is **`in_progress`** (`startJob`, `submitCloseout` in `convex/jobs.ts`).
+- **Password authentication (Convex Auth):** Sign-in uses **email + password** via **Convex Auth** (see `src/EmailPasswordAuth.tsx`, `convex/auth.ts`).
+- **Self-serve org + technician invite join:** Office users **create an organization** during onboarding; technicians join with **organization slug + technician invite code** (`src/pages/OnboardingPage.tsx`, `convex/profiles.ts`).
+- **Photos optional (cap in code):** Photos are **not required**; uploads are capped at **12** images per closeout (`MAX_CLOSEOUT_PHOTOS` in `convex/jobs.ts`).
+- **No auto-advance to Invoice Ready:** After closeout submit, the job is **`Completed`**; it becomes **`Invoice Ready`** only after the office **releases for invoicing** (explicit mutation after viewing closeout—`releaseForInvoicing` in `convex/jobs.ts`).
+- **Scheduled-job reassignment via office edit:** While a job is **`scheduled`**, office can **edit** fields including **assigned technician**; edits are blocked once work has started (`updateJob` in `convex/jobs.ts`).
+- **English UI strings (Finnish market context):** In-app copy is **English**; the product still assumes **Finnish market** usage for addresses, names, and operational norms (see §11).
+- **Appointment date encoding:** The UI collects a **local calendar date**; it is stored as **UTC midnight** for that date via `dateInputValueToAppointmentDateMs` / round-trip helpers in `src/lib/date.ts` (see comment on `appointmentDate` there).
+
+**Also implemented (narrows earlier PRD ambiguity):** Technician assignments are listed **per selected calendar day** (date control defaults to **today**, any day selectable—`listTechnicianJobsForDay`, `src/pages/TechnicianJobsPage.tsx`). **Labor hours** accept **fractional** values in the UI (`step={0.25}`) with server validation **0–24**. **Materials** are captured as **free text** for MVP.
+
+### Remaining open questions
+
+1. **Materials:** free text is implemented; confirm with pilot whether **structured line items** (qty/part) are needed soon or can stay text-only.
+2. **Closeout immutability:** do coordinators ever need **“unlock edit”** for honest mistakes in week one?
+3. **Offline / flaky network:** hard fail with message vs **optimistic draft** in `localStorage` (or other client persistence)?
+4. **Customer PII retention:** default retention period and **deletion request** process (legal/ops; beyond MVP implementation detail).
 
 ---
 
@@ -351,5 +359,6 @@ Either **embedded on `Job`** or `JobCloseout` 1:1 table—choose one in implemen
 | ------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | 0.1     | 2026-05-07 | Initial PRD from MVP + product docs synthesis.                                                                                            |
 | 0.2     | 2026-05-07 | Aligned state machine with MVP (`Scheduled` → `In Progress` → `Completed` → `Invoice Ready`); added office release step + FR renumbering. |
+| 0.3     | 2026-05-08 | §13: documented implementation decisions vs remaining open questions.                                                                     |
 
 Update version row when scope or acceptance criteria change.
