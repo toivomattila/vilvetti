@@ -33,7 +33,10 @@ import {
 } from '@/lib/closeoutDraft'
 import { prepareCloseoutPhoto } from '@/lib/imageUploadPrep'
 import { JOB_STATUS_LABELS } from '@/lib/jobs'
-import { uploadBlobToConvexStorage } from '@/lib/upload'
+import {
+  describeConnectivityError,
+  uploadBlobToConvexStorage,
+} from '@/lib/upload'
 
 type StagedPhoto = {
   id: string
@@ -64,13 +67,18 @@ export function TechnicianJobDetailPage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const canvasContainerRef = useRef<HTMLDivElement | null>(null)
   const stagedPhotosRef = useRef<StagedPhoto[]>([])
+  const closeoutFormRef = useRef<HTMLFormElement | null>(null)
   const drawingRef = useRef(false)
   const [stagedPhotos, setStagedPhotos] = useState<StagedPhoto[]>([])
   const [hasSignature, setHasSignature] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [startJobError, setStartJobError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<CloseoutFieldErrors>({})
   const [isDirty, setIsDirty] = useState(false)
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator !== 'undefined' && navigator.onLine,
+  )
 
   const [workCompleted, setWorkCompleted] = useState('')
   const [laborHoursInput, setLaborHoursInput] = useState('')
@@ -200,6 +208,17 @@ export function TechnicianJobDetailPage() {
     }
   }, [])
 
+  useEffect(() => {
+    const onOnline = () => setIsOnline(true)
+    const onOffline = () => setIsOnline(false)
+    window.addEventListener('online', onOnline)
+    window.addEventListener('offline', onOffline)
+    return () => {
+      window.removeEventListener('online', onOnline)
+      window.removeEventListener('offline', onOffline)
+    }
+  }, [])
+
   function addStagedFiles(fileList: FileList | File[]) {
     const incoming = Array.from(fileList).filter(
       (file) => file.size > 0 && file.type.startsWith('image/'),
@@ -236,6 +255,7 @@ export function TechnicianJobDetailPage() {
     }
     event.target.value = ''
   }
+
 
   function withCanvasContext(
     callback: (
@@ -318,6 +338,7 @@ export function TechnicianJobDetailPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setFieldErrors({})
+    setError(null)
 
     if (!id) {
       setFieldErrors({ form: 'Missing job id.' })
@@ -401,6 +422,8 @@ export function TechnicianJobDetailPage() {
       clearCloseoutDraft(jobId)
       setIsDirty(false)
       navigate('/field', { replace: true })
+    } catch (submitError) {
+      setError(describeConnectivityError(submitError))
     } finally {
       setIsSubmitting(false)
     }
@@ -469,11 +492,7 @@ export function TechnicianJobDetailPage() {
               onClick={() => {
                 setStartJobError(null)
                 void startJob({ jobId }).catch((startError: unknown) => {
-                  setStartJobError(
-                    startError instanceof Error
-                      ? startError.message
-                      : 'Could not start this job.',
-                  )
+                  setStartJobError(describeConnectivityError(startError))
                 })
               }}
               type="button"
@@ -495,7 +514,20 @@ export function TechnicianJobDetailPage() {
             <CardTitle>Submit closeout</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            {!isOnline ? (
+              <p
+                className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+                role="status"
+              >
+                You appear to be offline. Connect to the internet, then submit
+                the closeout or tap Retry after you are back online.
+              </p>
+            ) : null}
+            <form
+              className="space-y-4"
+              onSubmit={handleSubmit}
+              ref={closeoutFormRef}
+            >
               <div className="space-y-2">
                 <Label htmlFor="workCompleted">Work completed</Label>
                 <Textarea
@@ -677,6 +709,20 @@ export function TechnicianJobDetailPage() {
                 >
                   {fieldErrors.form}
                 </p>
+              ) : null}
+              {error ? (
+                <div className="border-destructive/30 bg-destructive/5 flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-start sm:justify-between">
+                  <p className="text-destructive text-sm">{error}</p>
+                  <Button
+                    disabled={isSubmitting}
+                    onClick={() => closeoutFormRef.current?.requestSubmit()}
+                    size="sm"
+                    type="button"
+                    variant="outline"
+                  >
+                    Retry
+                  </Button>
+                </div>
               ) : null}
               <Button
                 className="w-full sm:w-auto"
