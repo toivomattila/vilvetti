@@ -310,7 +310,7 @@ Either **embedded on `Job`** or `JobCloseout` 1:1 table—choose one in implemen
 
 ### Compliance
 
-- **GDPR-relevant:** personal data (customer names, addresses, signatures, photos) stored in Convex and file storage—**privacy policy and DPA path non-goal for PRD detail** but implementation must follow company legal guidance (retention, access, deletion—Open Question).
+- **GDPR-relevant:** personal data (customer names, addresses, signatures, photos) stored in Convex and file storage—**privacy policy and DPA path non-goal for PRD detail** but implementation must follow company legal guidance (retention, access, deletion—Open Question). For a **pilot-oriented** inventory of stored data and non-legal checklist items (retention conversation starters, export/deletion placeholders), see [Pilot data handling](pilot-data-handling.md).
 
 ---
 
