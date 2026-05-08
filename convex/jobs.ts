@@ -162,6 +162,68 @@ export const createJob = mutation({
   },
 })
 
+export const updateJob = mutation({
+  args: {
+    jobId: v.id('jobs'),
+    customerName: v.string(),
+    customerAddress: v.string(),
+    appointmentDate: v.number(),
+    problemDescription: v.string(),
+    assignedTechnicianId: v.id('users'),
+  },
+  handler: async (ctx, args) => {
+    const { profile } = await requireOfficeContext(ctx)
+
+    const customerName = args.customerName.trim()
+    const customerAddress = args.customerAddress.trim()
+    const problemDescription = args.problemDescription.trim()
+
+    if (!customerName) {
+      throw new Error('Customer name is required.')
+    }
+    if (!customerAddress) {
+      throw new Error('Customer address is required.')
+    }
+    if (!problemDescription) {
+      throw new Error('Problem description is required.')
+    }
+
+    const job = requireJobInOrganization(
+      await ctx.db.get(args.jobId),
+      profile.organizationId,
+    )
+    if (job.status !== 'scheduled') {
+      throw new Error(
+        'Only scheduled jobs can be edited. Once work has started, details are locked.',
+      )
+    }
+
+    const technicianProfile = await ctx.db
+      .query('profiles')
+      .withIndex('by_userId', (q) => q.eq('userId', args.assignedTechnicianId))
+      .unique()
+    if (
+      !technicianProfile ||
+      technicianProfile.organizationId !== profile.organizationId ||
+      technicianProfile.role !== 'technician'
+    ) {
+      throw new Error(
+        'Assigned technician must be a technician in your organization.',
+      )
+    }
+
+    await ctx.db.patch(job._id, {
+      customerName,
+      customerAddress,
+      appointmentDate: args.appointmentDate,
+      problemDescription,
+      assignedTechnicianId: args.assignedTechnicianId,
+    })
+
+    return { ok: true }
+  },
+})
+
 export const listOfficeJobs = query({
   args: {
     status: v.optional(jobStatusValidator),

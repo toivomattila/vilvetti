@@ -5,7 +5,7 @@ import { api } from '../convex/_generated/api'
 import { AppHeader } from '@/components/AppHeader'
 import { EmailPasswordAuth } from '@/EmailPasswordAuth'
 import { OnboardingPage } from '@/pages/OnboardingPage'
-import { OfficeCreateJobPage } from '@/pages/OfficeCreateJobPage'
+import { OfficeJobFormPage } from '@/pages/OfficeJobFormPage'
 import { OfficeJobDetailPage } from '@/pages/OfficeJobDetailPage'
 import { OfficeJobsPage } from '@/pages/OfficeJobsPage'
 import { TechnicianJobDetailPage } from '@/pages/TechnicianJobDetailPage'
@@ -113,7 +113,8 @@ export default function App() {
 
       <Route element={<RoleLayout role="office" />} path="/office">
         <Route element={<OfficeJobsPage />} index />
-        <Route element={<OfficeCreateJobPage />} path="jobs/new" />
+        <Route element={<OfficeJobFormPage />} path="jobs/new" />
+        <Route element={<OfficeJobFormPage />} path="jobs/:jobId/edit" />
         <Route element={<OfficeJobDetailPage />} path="jobs/:id" />
       </Route>
 

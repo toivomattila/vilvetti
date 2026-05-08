@@ -71,9 +71,16 @@ export function OfficeJobDetailPage() {
         <Button asChild size="sm" variant="outline">
           <Link to="/office">Back to jobs</Link>
         </Button>
-        <Badge variant="secondary">
-          {JOB_STATUS_LABELS[detail.job.status]}
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {detail.job.status === 'scheduled' ? (
+            <Button asChild size="sm" variant="secondary">
+              <Link to={`/office/jobs/${jobId}/edit`}>Edit job</Link>
+            </Button>
+          ) : null}
+          <Badge variant="secondary">
+            {JOB_STATUS_LABELS[detail.job.status]}
+          </Badge>
+        </div>
       </div>
 
       <Card>
