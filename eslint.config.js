@@ -6,6 +6,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
 import convexPlugin from '@convex-dev/eslint-plugin'
+import unusedImports from 'eslint-plugin-unused-imports'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
@@ -33,6 +34,14 @@ export default defineConfig([
         tsconfigRootDir,
       },
     },
+    plugins: {
+      'unused-imports': unusedImports,
+    },
+    rules: {
+      // Remove unused imports (fixable); keep @typescript-eslint/no-unused-vars for vars
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': 'off',
+    },
   },
   {
     files: ['convex/**/*.ts'],
@@ -43,6 +52,13 @@ export default defineConfig([
         tsconfigRootDir,
         projectService: true,
       },
+    },
+    plugins: {
+      'unused-imports': unusedImports,
+    },
+    rules: {
+      'unused-imports/no-unused-imports': 'error',
+      'unused-imports/no-unused-vars': 'off',
     },
   },
   ...convexPlugin.configs.recommended,
