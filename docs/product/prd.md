@@ -79,6 +79,8 @@ The business still needs that data for **invoicing and operational tracking**, s
 | **Closeout submission rate**        | % of assigned jobs that reach **Invoice Ready** with submitted closeout                                        | **↑** toward 100% for pilot cohort   |
 | **Time to first complete closeout** | Minutes from “job visible to technician” to **submitted** closeout                                             | Stable or **↓** as technicians adopt |
 
+**How to measure these without in-app dashboards:** use the [pilot metrics checklist](pilot-metrics.md) (spreadsheet columns, chase-event log, baseline month for invoice lag).
+
 ### What success looks like
 
 - Coordinators say they can **invoice without chasing** for the fields the product collects.
