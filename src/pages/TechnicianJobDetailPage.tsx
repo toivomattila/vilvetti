@@ -256,7 +256,6 @@ export function TechnicianJobDetailPage() {
     event.target.value = ''
   }
 
-
   function withCanvasContext(
     callback: (
       context: CanvasRenderingContext2D,
