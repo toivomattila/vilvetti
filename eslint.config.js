@@ -14,6 +14,7 @@ const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
 export default defineConfig([
   globalIgnores([
     'dist',
+    'coverage/**',
     'convex/_generated/**',
     '.agents/**',
     '.cursor/**',

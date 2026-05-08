@@ -36,8 +36,8 @@ jobs:
       - name: Typecheck and Vite build
         run: npm run build
 
-      - name: Unit tests
-        run: npm test
+      - name: Unit tests (with coverage)
+        run: npm run test:coverage
 
       - name: Knip
         run: npm run knip
