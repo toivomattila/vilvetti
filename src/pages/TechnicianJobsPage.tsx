@@ -21,16 +21,31 @@ export function TechnicianJobsPage() {
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-4 p-4">
       <div className="space-y-2">
-        <h1 className="text-xl font-semibold">My jobs</h1>
-        <label className="space-y-1 text-sm">
-          <span className="text-muted-foreground">Select day</span>
-          <input
-            className="border-input w-full rounded-md border bg-background px-3 py-2 text-base sm:max-w-xs"
-            onChange={(event) => setDateInputValue(event.target.value)}
-            type="date"
-            value={dateInputValue}
-          />
-        </label>
+        <div>
+          <h1 className="text-xl font-semibold">My jobs</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Pick a nearby day to see jobs scheduled around today.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+          <label className="flex-1 space-y-1 text-sm sm:max-w-xs">
+            <span className="text-muted-foreground">Select day</span>
+            <input
+              className="border-input w-full rounded-md border bg-background px-3 py-2 text-base"
+              onChange={(event) => setDateInputValue(event.target.value)}
+              type="date"
+              value={dateInputValue}
+            />
+          </label>
+          <Button
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => setDateInputValue(getTodayLocalDateInputValue())}
+            type="button"
+            variant="outline"
+          >
+            Today
+          </Button>
+        </div>
       </div>
 
       {jobs === undefined ? (
