@@ -17,6 +17,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  mapCloseoutServerError,
+  validateCloseoutClient,
+  type CloseoutFieldErrors,
+} from '@/lib/closeoutFieldErrors'
 import { formatAppointmentDate } from '@/lib/date'
 import { JOB_STATUS_LABELS } from '@/lib/jobs'
 import { uploadBlobToConvexStorage } from '@/lib/upload'
@@ -44,7 +49,8 @@ export function TechnicianJobDetailPage() {
   const drawingRef = useRef(false)
   const [hasSignature, setHasSignature] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [startJobError, setStartJobError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<CloseoutFieldErrors>({})
   const [isDirty, setIsDirty] = useState(false)
 
   useLayoutEffect(() => {
@@ -177,14 +183,10 @@ export function TechnicianJobDetailPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError(null)
+    setFieldErrors({})
 
-    if (!hasSignature) {
-      setError('Please add a customer signature before submitting.')
-      return
-    }
     if (!id) {
-      setError('Missing job id.')
+      setFieldErrors({ form: 'Missing job id.' })
       return
     }
 
@@ -197,8 +199,13 @@ export function TechnicianJobDetailPage() {
       (entry): entry is File => entry instanceof File && entry.size > 0,
     )
 
-    if (Number.isNaN(laborHoursRaw)) {
-      setError('Labor hours must be a number.')
+    const clientErrors = validateCloseoutClient({
+      workCompleted,
+      laborHoursRaw,
+      hasSignature,
+    })
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors)
       return
     }
 
@@ -206,38 +213,62 @@ export function TechnicianJobDetailPage() {
     try {
       const uploadedPhotoIds: string[] = []
       for (const photo of photos) {
-        const photoStorageId = await uploadBlobToConvexStorage(
-          photo,
-          photo.name,
-          getUploadUrl,
-        )
-        uploadedPhotoIds.push(photoStorageId)
+        try {
+          const photoStorageId = await uploadBlobToConvexStorage(
+            photo,
+            photo.name,
+            getUploadUrl,
+          )
+          uploadedPhotoIds.push(photoStorageId)
+        } catch (photoErr) {
+          const message =
+            photoErr instanceof Error
+              ? photoErr.message
+              : 'Could not upload photos. Please try again.'
+          setFieldErrors({ photos: message })
+          return
+        }
       }
 
-      const signatureBlob = await exportSignatureBlob()
-      const signatureStorageId = await uploadBlobToConvexStorage(
-        signatureBlob,
-        `signature-${jobId}.png`,
-        getUploadUrl,
-      )
+      let signatureStorageId: string
+      try {
+        const signatureBlob = await exportSignatureBlob()
+        signatureStorageId = await uploadBlobToConvexStorage(
+          signatureBlob,
+          `signature-${jobId}.png`,
+          getUploadUrl,
+        )
+      } catch (sigErr) {
+        const message =
+          sigErr instanceof Error
+            ? sigErr.message
+            : 'Could not upload signature. Please try again.'
+        setFieldErrors({ signature: message })
+        return
+      }
 
-      await submitCloseout({
-        jobId,
-        workCompleted,
-        laborHours: laborHoursRaw,
-        materialsUsed,
-        notes,
-        photoStorageIds: uploadedPhotoIds,
-        signatureStorageId,
-      })
+      try {
+        await submitCloseout({
+          jobId,
+          workCompleted,
+          laborHours: laborHoursRaw,
+          materialsUsed,
+          notes,
+          photoStorageIds: uploadedPhotoIds,
+          signatureStorageId,
+        })
+      } catch (mutationErr) {
+        const raw =
+          mutationErr instanceof Error
+            ? mutationErr.message
+            : 'Could not submit closeout.'
+        const mapped = mapCloseoutServerError(raw)
+        setFieldErrors({ [mapped.field]: mapped.message })
+        return
+      }
+
       setIsDirty(false)
       navigate('/field', { replace: true })
-    } catch (submitError) {
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : 'Could not submit closeout.',
-      )
     } finally {
       setIsSubmitting(false)
     }
@@ -304,9 +335,9 @@ export function TechnicianJobDetailPage() {
             <Button
               className="w-full sm:w-auto"
               onClick={() => {
-                setError(null)
+                setStartJobError(null)
                 void startJob({ jobId }).catch((startError: unknown) => {
-                  setError(
+                  setStartJobError(
                     startError instanceof Error
                       ? startError.message
                       : 'Could not start this job.',
@@ -317,7 +348,11 @@ export function TechnicianJobDetailPage() {
             >
               Start job
             </Button>
-            {error ? <p className="text-destructive text-sm">{error}</p> : null}
+            {startJobError ? (
+              <p className="text-destructive text-sm" role="alert">
+                {startJobError}
+              </p>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
@@ -336,15 +371,34 @@ export function TechnicianJobDetailPage() {
               <div className="space-y-2">
                 <Label htmlFor="workCompleted">Work completed</Label>
                 <Textarea
+                  aria-describedby={
+                    fieldErrors.workCompleted
+                      ? 'workCompleted-error'
+                      : undefined
+                  }
+                  aria-invalid={!!fieldErrors.workCompleted}
                   id="workCompleted"
                   name="workCompleted"
                   required
                   rows={4}
                 />
+                {fieldErrors.workCompleted ? (
+                  <p
+                    className="text-destructive text-sm"
+                    id="workCompleted-error"
+                    role="alert"
+                  >
+                    {fieldErrors.workCompleted}
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="laborHours">Labor hours</Label>
                 <Input
+                  aria-describedby={
+                    fieldErrors.laborHours ? 'laborHours-error' : undefined
+                  }
+                  aria-invalid={!!fieldErrors.laborHours}
                   id="laborHours"
                   min={0}
                   name="laborHours"
@@ -352,6 +406,15 @@ export function TechnicianJobDetailPage() {
                   step={0.25}
                   type="number"
                 />
+                {fieldErrors.laborHours ? (
+                  <p
+                    className="text-destructive text-sm"
+                    id="laborHours-error"
+                    role="alert"
+                  >
+                    {fieldErrors.laborHours}
+                  </p>
+                ) : null}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="materialsUsed">Materials used</Label>
@@ -365,11 +428,24 @@ export function TechnicianJobDetailPage() {
                 <Label htmlFor="photos">Photos</Label>
                 <Input
                   accept="image/*"
+                  aria-describedby={
+                    fieldErrors.photos ? 'photos-error' : undefined
+                  }
+                  aria-invalid={!!fieldErrors.photos}
                   id="photos"
                   multiple
                   name="photos"
                   type="file"
                 />
+                {fieldErrors.photos ? (
+                  <p
+                    className="text-destructive text-sm"
+                    id="photos-error"
+                    role="alert"
+                  >
+                    {fieldErrors.photos}
+                  </p>
+                ) : null}
               </div>
               <Separator />
               <div className="space-y-2">
@@ -386,6 +462,11 @@ export function TechnicianJobDetailPage() {
                 </div>
                 <div className="min-h-[180px] w-full" ref={canvasContainerRef}>
                   <canvas
+                    aria-describedby={
+                      fieldErrors.signature ? 'signature-error' : undefined
+                    }
+                    aria-invalid={!!fieldErrors.signature}
+                    aria-label="Customer signature"
                     className="w-full touch-none rounded-md border bg-white"
                     onPointerCancel={stopDrawing}
                     onPointerDown={startDrawing}
@@ -395,9 +476,24 @@ export function TechnicianJobDetailPage() {
                     ref={canvasRef}
                   />
                 </div>
+                {fieldErrors.signature ? (
+                  <p
+                    className="text-destructive text-sm"
+                    id="signature-error"
+                    role="alert"
+                  >
+                    {fieldErrors.signature}
+                  </p>
+                ) : null}
               </div>
-              {error ? (
-                <p className="text-destructive text-sm">{error}</p>
+              {fieldErrors.form ? (
+                <p
+                  className="text-destructive text-sm"
+                  id="closeout-form-error"
+                  role="alert"
+                >
+                  {fieldErrors.form}
+                </p>
               ) : null}
               <Button
                 className="w-full sm:w-auto"
