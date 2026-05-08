@@ -95,7 +95,7 @@ async function getAuthorizedJobDetail(
 ): Promise<AuthorizedJobDetail> {
   const userId = await requireAuthenticatedUserId(ctx)
   const profile = await requireProfileForUser(ctx, userId)
-  const job = await ctx.db.get(jobId)
+  const job = await ctx.db.get('jobs', jobId)
 
   if (profile.role === 'office') {
     requireJobInOrganization(job, profile.organizationId)
@@ -208,7 +208,7 @@ export const updateJob = mutation({
       await validateOfficeJobFieldsAndAssignee(ctx, profile, args)
 
     const job = requireJobInOrganization(
-      await ctx.db.get(args.jobId),
+      await ctx.db.get('jobs', args.jobId),
       profile.organizationId,
     )
     if (job.status !== 'scheduled') {
@@ -217,7 +217,7 @@ export const updateJob = mutation({
       )
     }
 
-    await ctx.db.patch(job._id, {
+    await ctx.db.patch('jobs', job._id, {
       customerName,
       customerAddress,
       appointmentDate: args.appointmentDate,
@@ -341,7 +341,7 @@ export const startJob = mutation({
   handler: async (ctx, args) => {
     const { userId, profile } = await requireTechnicianContext(ctx)
     const job = requireJobInOrganization(
-      await ctx.db.get(args.jobId),
+      await ctx.db.get('jobs', args.jobId),
       profile.organizationId,
     )
 
@@ -352,7 +352,7 @@ export const startJob = mutation({
       throw new Error('Only scheduled jobs can be started.')
     }
 
-    await ctx.db.patch(job._id, { status: 'in_progress' })
+    await ctx.db.patch('jobs', job._id, { status: 'in_progress' })
     return { ok: true }
   },
 })
@@ -370,7 +370,7 @@ export const submitCloseout = mutation({
   handler: async (ctx, args) => {
     const { userId, profile } = await requireTechnicianContext(ctx)
     const job = requireJobInOrganization(
-      await ctx.db.get(args.jobId),
+      await ctx.db.get('jobs', args.jobId),
       profile.organizationId,
     )
 
@@ -422,7 +422,7 @@ export const submitCloseout = mutation({
       throw new Error('Signature upload was missing—re-upload and try again.')
     }
 
-    await ctx.db.patch(job._id, {
+    await ctx.db.patch('jobs', job._id, {
       status: 'completed',
       workCompleted,
       materialsUsed: args.materialsUsed,
@@ -445,7 +445,7 @@ export const markCloseoutViewed = mutation({
   handler: async (ctx, args) => {
     const { profile } = await requireOfficeContext(ctx)
     const job = requireJobInOrganization(
-      await ctx.db.get(args.jobId),
+      await ctx.db.get('jobs', args.jobId),
       profile.organizationId,
     )
 
@@ -454,7 +454,7 @@ export const markCloseoutViewed = mutation({
     }
 
     if (!job.closeoutViewedAt) {
-      await ctx.db.patch(job._id, { closeoutViewedAt: Date.now() })
+      await ctx.db.patch('jobs', job._id, { closeoutViewedAt: Date.now() })
     }
 
     return { ok: true }
@@ -468,7 +468,7 @@ export const releaseForInvoicing = mutation({
   handler: async (ctx, args) => {
     const { userId, profile } = await requireOfficeContext(ctx)
     const job = requireJobInOrganization(
-      await ctx.db.get(args.jobId),
+      await ctx.db.get('jobs', args.jobId),
       profile.organizationId,
     )
 
@@ -481,7 +481,7 @@ export const releaseForInvoicing = mutation({
       )
     }
 
-    await ctx.db.patch(job._id, {
+    await ctx.db.patch('jobs', job._id, {
       status: 'invoice_ready',
       releasedForInvoiceAt: Date.now(),
       releasedByUserId: userId,

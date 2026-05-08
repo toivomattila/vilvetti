@@ -47,7 +47,10 @@ export const getMyProfile = query({
       return null
     }
 
-    const organization = await ctx.db.get(profile.organizationId)
+    const organization = await ctx.db.get(
+      'organizations',
+      profile.organizationId,
+    )
     if (!organization) {
       throw new Error('Organization not found for your profile.')
     }
@@ -187,7 +190,7 @@ export const ensureTechnicianInviteCode = mutation({
   args: {},
   handler: async (ctx) => {
     const { profile } = await requireOfficeContext(ctx)
-    const org = await ctx.db.get(profile.organizationId)
+    const org = await ctx.db.get('organizations', profile.organizationId)
     if (!org) {
       throw new Error('Organization not found.')
     }
@@ -195,7 +198,7 @@ export const ensureTechnicianInviteCode = mutation({
       return { technicianInviteCode: org.technicianInviteCode }
     }
     const technicianInviteCode = generateTechnicianInviteCode()
-    await ctx.db.patch(org._id, { technicianInviteCode })
+    await ctx.db.patch('organizations', org._id, { technicianInviteCode })
     return { technicianInviteCode }
   },
 })

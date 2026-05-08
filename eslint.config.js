@@ -5,6 +5,7 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import convexPlugin from '@convex-dev/eslint-plugin'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 const tsconfigRootDir = path.dirname(fileURLToPath(import.meta.url))
@@ -40,9 +41,11 @@ export default defineConfig([
       globals: globals.node,
       parserOptions: {
         tsconfigRootDir,
+        projectService: true,
       },
     },
   },
+  ...convexPlugin.configs.recommended,
   {
     files: ['src/components/ui/**/*.tsx'],
     rules: {

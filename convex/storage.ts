@@ -8,7 +8,7 @@ export const generateUploadUrl = mutation({
   },
   handler: async (ctx, args) => {
     const { userId, profile } = await requireTechnicianContext(ctx)
-    const job = await ctx.db.get(args.jobId)
+    const job = await ctx.db.get('jobs', args.jobId)
     if (!job || job.organizationId !== profile.organizationId) {
       throw new Error('Job not found.')
     }
