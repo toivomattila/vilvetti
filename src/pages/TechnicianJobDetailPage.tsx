@@ -23,6 +23,7 @@ import {
   type CloseoutFieldErrors,
 } from '@/lib/closeoutFieldErrors'
 import { formatAppointmentDate } from '@/lib/date'
+import { prepareCloseoutPhoto } from '@/lib/imageUploadPrep'
 import { JOB_STATUS_LABELS } from '@/lib/jobs'
 import { uploadBlobToConvexStorage } from '@/lib/upload'
 
@@ -214,9 +215,10 @@ export function TechnicianJobDetailPage() {
       const uploadedPhotoIds: string[] = []
       for (const photo of photos) {
         try {
+          const prepared = await prepareCloseoutPhoto(photo)
           const photoStorageId = await uploadBlobToConvexStorage(
-            photo,
-            photo.name,
+            prepared.blob,
+            prepared.fileName,
             getUploadUrl,
           )
           uploadedPhotoIds.push(photoStorageId)
