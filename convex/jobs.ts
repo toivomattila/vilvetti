@@ -1,13 +1,17 @@
+import { paginationOptsValidator } from 'convex/server'
 import { mutation, query } from './_generated/server'
 import { v } from 'convex/values'
 import type { Doc, Id } from './_generated/dataModel'
 import type { MutationCtx, QueryCtx } from './_generated/server'
 import {
   requireAuthenticatedUserId,
-  requireOfficeRole,
+  requireOfficeContext,
   requireProfileForUser,
+  requireTechnicianContext,
   requireTechnicianRole,
 } from './lib/profileAccess'
+
+const MAX_CLOSEOUT_PHOTOS = 12
 
 const jobStatusValidator = v.union(
   v.literal('scheduled'),
@@ -15,30 +19,6 @@ const jobStatusValidator = v.union(
   v.literal('completed'),
   v.literal('invoice_ready'),
 )
-
-type DbAuthCtx =
-  | Pick<QueryCtx, 'db' | 'auth'>
-  | Pick<MutationCtx, 'db' | 'auth'>
-
-async function requireOfficeContext(ctx: DbAuthCtx): Promise<{
-  userId: Id<'users'>
-  profile: Doc<'profiles'>
-}> {
-  const userId = await requireAuthenticatedUserId(ctx)
-  const profile = await requireProfileForUser(ctx, userId)
-  requireOfficeRole(profile)
-  return { userId, profile }
-}
-
-async function requireTechnicianContext(ctx: DbAuthCtx): Promise<{
-  userId: Id<'users'>
-  profile: Doc<'profiles'>
-}> {
-  const userId = await requireAuthenticatedUserId(ctx)
-  const profile = await requireProfileForUser(ctx, userId)
-  requireTechnicianRole(profile)
-  return { userId, profile }
-}
 
 function requireJobInOrganization(
   job: Doc<'jobs'> | null,
@@ -48,6 +28,58 @@ function requireJobInOrganization(
     throw new Error('Job not found.')
   }
   return job
+}
+
+function assertLikelyStorageId(id: string): void {
+  const trimmed = id.trim()
+  if (!trimmed || trimmed.length > 2048) {
+    throw new Error('Invalid file reference.')
+  }
+}
+
+async function validateOfficeJobFieldsAndAssignee(
+  ctx: MutationCtx,
+  profile: Doc<'profiles'>,
+  args: {
+    customerName: string
+    customerAddress: string
+    problemDescription: string
+    assignedTechnicianId: Id<'users'>
+  },
+): Promise<{
+  customerName: string
+  customerAddress: string
+  problemDescription: string
+}> {
+  const customerName = args.customerName.trim()
+  const customerAddress = args.customerAddress.trim()
+  const problemDescription = args.problemDescription.trim()
+
+  if (!customerName) {
+    throw new Error('Customer name is required.')
+  }
+  if (!customerAddress) {
+    throw new Error('Customer address is required.')
+  }
+  if (!problemDescription) {
+    throw new Error('Problem description is required.')
+  }
+
+  const technicianProfile = await ctx.db
+    .query('profiles')
+    .withIndex('by_userId', (q) => q.eq('userId', args.assignedTechnicianId))
+    .unique()
+  if (
+    !technicianProfile ||
+    technicianProfile.organizationId !== profile.organizationId ||
+    technicianProfile.role !== 'technician'
+  ) {
+    throw new Error(
+      'Assigned technician must be a technician in your organization.',
+    )
+  }
+
+  return { customerName, customerAddress, problemDescription }
 }
 
 type AuthorizedJobDetail = {
@@ -90,18 +122,22 @@ async function getAuthorizedJobDetail(
         .unique()
     : null
 
+  const submittedBy =
+    submittedByProfile &&
+    submittedByProfile.organizationId === checkedJob.organizationId
+      ? {
+          userId: submittedByProfile.userId,
+          displayName: submittedByProfile.displayName,
+        }
+      : null
+
   return {
     job: checkedJob,
     technicianDisplayName:
       technicianProfile?.organizationId === checkedJob.organizationId
         ? technicianProfile.displayName
         : null,
-    submittedBy: submittedByProfile
-      ? {
-          userId: submittedByProfile.userId,
-          displayName: submittedByProfile.displayName,
-        }
-      : null,
+    submittedBy,
   }
 }
 
@@ -116,33 +152,8 @@ export const createJob = mutation({
   handler: async (ctx, args) => {
     const { userId, profile } = await requireOfficeContext(ctx)
 
-    const customerName = args.customerName.trim()
-    const customerAddress = args.customerAddress.trim()
-    const problemDescription = args.problemDescription.trim()
-
-    if (!customerName) {
-      throw new Error('Customer name is required.')
-    }
-    if (!customerAddress) {
-      throw new Error('Customer address is required.')
-    }
-    if (!problemDescription) {
-      throw new Error('Problem description is required.')
-    }
-
-    const technicianProfile = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', (q) => q.eq('userId', args.assignedTechnicianId))
-      .unique()
-    if (
-      !technicianProfile ||
-      technicianProfile.organizationId !== profile.organizationId ||
-      technicianProfile.role !== 'technician'
-    ) {
-      throw new Error(
-        'Assigned technician must be a technician in your organization.',
-      )
-    }
+    const { customerName, customerAddress, problemDescription } =
+      await validateOfficeJobFieldsAndAssignee(ctx, profile, args)
 
     return await ctx.db.insert('jobs', {
       organizationId: profile.organizationId,
@@ -174,19 +185,8 @@ export const updateJob = mutation({
   handler: async (ctx, args) => {
     const { profile } = await requireOfficeContext(ctx)
 
-    const customerName = args.customerName.trim()
-    const customerAddress = args.customerAddress.trim()
-    const problemDescription = args.problemDescription.trim()
-
-    if (!customerName) {
-      throw new Error('Customer name is required.')
-    }
-    if (!customerAddress) {
-      throw new Error('Customer address is required.')
-    }
-    if (!problemDescription) {
-      throw new Error('Problem description is required.')
-    }
+    const { customerName, customerAddress, problemDescription } =
+      await validateOfficeJobFieldsAndAssignee(ctx, profile, args)
 
     const job = requireJobInOrganization(
       await ctx.db.get(args.jobId),
@@ -195,20 +195,6 @@ export const updateJob = mutation({
     if (job.status !== 'scheduled') {
       throw new Error(
         'Only scheduled jobs can be edited. Once work has started, details are locked.',
-      )
-    }
-
-    const technicianProfile = await ctx.db
-      .query('profiles')
-      .withIndex('by_userId', (q) => q.eq('userId', args.assignedTechnicianId))
-      .unique()
-    if (
-      !technicianProfile ||
-      technicianProfile.organizationId !== profile.organizationId ||
-      technicianProfile.role !== 'technician'
-    ) {
-      throw new Error(
-        'Assigned technician must be a technician in your organization.',
       )
     }
 
@@ -227,21 +213,21 @@ export const updateJob = mutation({
 export const listOfficeJobs = query({
   args: {
     status: v.optional(jobStatusValidator),
+    paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
     const { profile } = await requireOfficeContext(ctx)
     const status = args.status
 
-    const jobs =
+    const base =
       status === undefined
-        ? await ctx.db
+        ? ctx.db
             .query('jobs')
             .withIndex('by_organization', (q) =>
               q.eq('organizationId', profile.organizationId),
             )
             .order('desc')
-            .collect()
-        : await ctx.db
+        : ctx.db
             .query('jobs')
             .withIndex('by_organization_and_status', (q) =>
               q
@@ -249,7 +235,8 @@ export const listOfficeJobs = query({
                 .eq('status', status),
             )
             .order('desc')
-            .collect()
+
+    const page = await base.paginate(args.paginationOpts)
 
     const profiles = await ctx.db
       .query('profiles')
@@ -263,11 +250,14 @@ export const listOfficeJobs = query({
         .map((p) => [p.userId, p.displayName]),
     )
 
-    return jobs.map((job) => ({
-      ...job,
-      technicianDisplayName:
-        technicianNameByUserId.get(job.assignedTechnicianId) ?? null,
-    }))
+    return {
+      ...page,
+      page: page.page.map((job) => ({
+        ...job,
+        technicianDisplayName:
+          technicianNameByUserId.get(job.assignedTechnicianId) ?? null,
+      })),
+    }
   },
 })
 
@@ -389,6 +379,28 @@ export const submitCloseout = mutation({
     }
     if (!signatureStorageId) {
       throw new Error('Customer signature is required.')
+    }
+
+    if (args.photoStorageIds.length > MAX_CLOSEOUT_PHOTOS) {
+      throw new Error(
+        `You can upload at most ${MAX_CLOSEOUT_PHOTOS} closeout photos.`,
+      )
+    }
+
+    for (const storageId of args.photoStorageIds) {
+      assertLikelyStorageId(storageId)
+      const url = await ctx.storage.getUrl(storageId as Id<'_storage'>)
+      if (url === null) {
+        throw new Error('Photo upload was missing—re-upload and try again.')
+      }
+    }
+
+    assertLikelyStorageId(signatureStorageId)
+    const signatureUrl = await ctx.storage.getUrl(
+      signatureStorageId as Id<'_storage'>,
+    )
+    if (signatureUrl === null) {
+      throw new Error('Signature upload was missing—re-upload and try again.')
     }
 
     await ctx.db.patch(job._id, {

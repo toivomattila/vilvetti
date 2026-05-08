@@ -48,3 +48,23 @@ export function requireTechnicianRole(profile: Doc<'profiles'>): void {
     throw new Error('Technician role required.')
   }
 }
+
+export async function requireOfficeContext(ctx: DbAuthCtx): Promise<{
+  userId: Id<'users'>
+  profile: Doc<'profiles'>
+}> {
+  const userId = await requireAuthenticatedUserId(ctx)
+  const profile = await requireProfileForUser(ctx, userId)
+  requireOfficeRole(profile)
+  return { userId, profile }
+}
+
+export async function requireTechnicianContext(ctx: DbAuthCtx): Promise<{
+  userId: Id<'users'>
+  profile: Doc<'profiles'>
+}> {
+  const userId = await requireAuthenticatedUserId(ctx)
+  const profile = await requireProfileForUser(ctx, userId)
+  requireTechnicianRole(profile)
+  return { userId, profile }
+}

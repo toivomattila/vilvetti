@@ -11,6 +11,7 @@ export default defineSchema({
   organizations: defineTable({
     name: v.string(),
     slug: v.string(),
+    technicianInviteCode: v.optional(v.string()),
   }).index('by_slug', ['slug']),
   profiles: defineTable({
     userId: v.id('users'),

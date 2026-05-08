@@ -3,6 +3,7 @@ import { v } from 'convex/values'
 import {
   getProfileForUser,
   requireAuthenticatedUserId,
+  requireOfficeContext,
 } from './lib/profileAccess'
 
 function normalizeSlug(rawSlug: string): string {
@@ -11,6 +12,30 @@ function normalizeSlug(rawSlug: string): string {
 
 function normalizeDisplayName(rawDisplayName: string): string {
   return rawDisplayName.trim()
+}
+
+/** 16 random bytes → 32 hex chars (128-bit entropy). */
+function generateTechnicianInviteCode(): string {
+  const bytes = new Uint8Array(16)
+  crypto.getRandomValues(bytes)
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Length-normalized constant-time comparison for invite codes (both trimmed).
+ * Avoids early exit on first differing character.
+ */
+function constantTimeInviteCodeEqual(a: string, b: string): boolean {
+  const ta = a.trim()
+  const tb = b.trim()
+  if (ta.length !== tb.length) {
+    return false
+  }
+  let diff = 0
+  for (let i = 0; i < ta.length; i++) {
+    diff |= ta.charCodeAt(i) ^ tb.charCodeAt(i)
+  }
+  return diff === 0
 }
 
 export const getMyProfile = query({
@@ -25,6 +50,17 @@ export const getMyProfile = query({
     const organization = await ctx.db.get(profile.organizationId)
     if (!organization) {
       throw new Error('Organization not found for your profile.')
+    }
+
+    if (profile.role === 'technician') {
+      return {
+        profile,
+        organization: {
+          _id: organization._id,
+          name: organization.name,
+          slug: organization.slug,
+        },
+      }
     }
 
     return { profile, organization }
@@ -66,9 +102,12 @@ export const createOrganizationAndProfile = mutation({
       throw new Error('Organization slug is already in use.')
     }
 
+    const technicianInviteCode = generateTechnicianInviteCode()
+
     const organizationId = await ctx.db.insert('organizations', {
       name: organizationName,
       slug,
+      technicianInviteCode,
     })
 
     const profileId = await ctx.db.insert('profiles', {
@@ -78,7 +117,7 @@ export const createOrganizationAndProfile = mutation({
       displayName,
     })
 
-    return { organizationId, profileId }
+    return { organizationId, profileId, technicianInviteCode }
   },
 })
 
@@ -86,6 +125,7 @@ export const joinOrganizationAsTechnician = mutation({
   args: {
     slug: v.string(),
     displayName: v.string(),
+    inviteCode: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await requireAuthenticatedUserId(ctx)
@@ -96,11 +136,15 @@ export const joinOrganizationAsTechnician = mutation({
 
     const slug = normalizeSlug(args.slug)
     const displayName = normalizeDisplayName(args.displayName)
+    const inviteCode = args.inviteCode.trim()
     if (!slug) {
       throw new Error('Organization slug is required.')
     }
     if (!displayName) {
       throw new Error('Display name is required.')
+    }
+    if (!inviteCode) {
+      throw new Error('Technician invite code is required.')
     }
 
     const organization = await ctx.db
@@ -109,8 +153,23 @@ export const joinOrganizationAsTechnician = mutation({
       .unique()
     if (!organization) {
       throw new Error(
-        'Organization not found. Check the join code and try again.',
+        'Organization not found. Check the slug and invite code and try again.',
       )
+    }
+
+    if (!organization.technicianInviteCode) {
+      throw new Error(
+        'This organization has not set up a technician invite code yet. Ask your office coordinator to sign in on the office app and use “Show / refresh technician invite code” on the jobs page to generate one.',
+      )
+    }
+
+    if (
+      !constantTimeInviteCodeEqual(
+        inviteCode,
+        organization.technicianInviteCode,
+      )
+    ) {
+      throw new Error('Invalid technician invite code.')
     }
 
     const profileId = await ctx.db.insert('profiles', {
@@ -121,6 +180,23 @@ export const joinOrganizationAsTechnician = mutation({
     })
 
     return { profileId, organizationId: organization._id }
+  },
+})
+
+export const ensureTechnicianInviteCode = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { profile } = await requireOfficeContext(ctx)
+    const org = await ctx.db.get(profile.organizationId)
+    if (!org) {
+      throw new Error('Organization not found.')
+    }
+    if (org.technicianInviteCode) {
+      return { technicianInviteCode: org.technicianInviteCode }
+    }
+    const technicianInviteCode = generateTechnicianInviteCode()
+    await ctx.db.patch(org._id, { technicianInviteCode })
+    return { technicianInviteCode }
   },
 })
 
