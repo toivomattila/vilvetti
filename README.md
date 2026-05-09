@@ -1,40 +1,44 @@
 # Vilvetti
 
-Mobile-first web client (Vite + React + TypeScript) and backend (Convex) for small HVAC / heat pump field operations: structured job closeouts so the office gets invoice-ready handoffs without chasing technicians. Product direction lives under [`docs/product/`](docs/product/).
+Mobile-first web app for **small HVAC / heat pump field teams**: structured job closeouts so the office gets invoice-ready handoffs without chasing technicians.
 
-## FR-14: In-app updates (MVP)
+**Stack:** Vite, React, TypeScript, Convex, Tailwind CSS, and shadcn-style UI primitives.
 
-Aligned with [section 10 — Notifications / Communication](docs/product/prd.md#10-notifications-communication) in the PRD.
+## Quick start
 
-- **No outbound notifications in MVP:** there are no email, SMS, or push integrations for new assignments or completed closeouts. Coordinators and technicians rely on opening the app—not on external alerts.
-- **Updates while the app is open:** the Vilvetti web client uses Convex so job lists and detail screens **update live** when data changes, as long as the browser tab is open and the connection is active—you see new assignments and completed work without manually reloading the page.
-- **Mobile browsers:** when a tab is in the background, the OS may pause networking; updates may not stream until you bring Vilvetti forward again. On return, Convex reconnects and the UI catches up. **There is no dedicated pull-to-refresh control for MVP** (you do not need one for basic freshness); this is **not** an offline-first product—expect connectivity when using live data.
+1. **Install:** `npm install`
+2. **Backend:** From the repo root, run `npm run dev:convex` (or `npx convex dev`), sign in, and link a deployment. Copy the deployment URL into `.env.local` as `VITE_CONVEX_URL`. First-time Convex steps are summarized in [`convex/README.md`](convex/README.md).
+3. **Frontend:** In another terminal, `npm run dev` and open the URL Vite prints (typically `http://localhost:5173`).
 
-**Summary:** _Live updates in-app while connected_ replaces _external messaging_ for MVP—they are different channels: stay-in-app visibility vs. no third-party notification pipeline.
+You need both processes running for a working local app.
 
 ## Prerequisites
 
-- Node.js 20+ (recommended)
+- Node.js **20+**
 - npm
+- A [Convex](https://www.convex.dev/) account (free tier is fine for development)
+
+## Configuration
+
+Copy `.env.example` to `.env.local` and set `VITE_CONVEX_URL` from the Convex dashboard or CLI.
+
+Convex Auth uses deployment environment variables (`JWT_PRIVATE_KEY`, JWKS); see comments in `.env.example` and [`scripts/generate-convex-auth-keys.mjs`](scripts/generate-convex-auth-keys.mjs).
 
 ## Scripts
 
-| Script                 | Purpose                          |
-| ---------------------- | -------------------------------- |
-| `npm run dev`          | Vite dev server (frontend)       |
-| `npm run dev:convex`   | Convex dev sync + dashboard      |
-| `npm run build`        | Typecheck + production build     |
-| `npm run preview`      | Preview production build locally |
-| `npm run lint`         | ESLint                           |
-| `npm run format`       | Prettier write                   |
-| `npm run format:check` | Prettier check                   |
+| Command                 | Purpose                              |
+| ----------------------- | ------------------------------------ |
+| `npm run dev`           | Vite dev server                      |
+| `npm run dev:convex`    | Convex dev sync and dashboard        |
+| `npm run build`         | Typecheck and production build       |
+| `npm run preview`       | Preview the production build locally |
+| `npm run lint`          | ESLint                               |
+| `npm run format`        | Prettier (write)                     |
+| `npm run format:check`  | Prettier (check only)                |
+| `npm run test`          | Vitest (single run)                  |
+| `npm run test:watch`    | Vitest (watch)                       |
+| `npm run test:coverage` | Vitest with coverage                 |
 
-Run **`npm run dev`** and **`npm run dev:convex`** in two terminals after [Convex](convex/README.md) is configured.
+## Documentation
 
-## Stack
-
-Vite, React, TypeScript, Convex, Tailwind CSS, shadcn/ui conventions (`components.json`, `cn()` helper). Engineering decisions: [`docs/engineering/tooling-and-standards.md`](docs/engineering/tooling-and-standards.md).
-
-## Environment
-
-Copy `.env.example` to `.env.local` and set `VITE_CONVEX_URL` from the Convex dashboard or CLI output.
+Product context, PRD, and engineering standards live under **[`docs/`](docs/README.md)**—start there for requirements and tooling decisions.
